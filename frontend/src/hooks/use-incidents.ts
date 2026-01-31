@@ -48,7 +48,11 @@ export interface Incident {
   metrics: Record<string, number | string | boolean>;
   relatedAlerts: string[];
   summary?: IncidentSummary;
+  // Dynamic SLO burn driver classification from backend
   sloBurnDriver?: SLOBurnDriver;
+  sloBurnEvidence?: string;
+  sloBurnConfidence?: number;
+  // Legacy field for backward compatibility
   evidence?: string;
 }
 

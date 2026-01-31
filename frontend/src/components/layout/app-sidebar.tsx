@@ -11,6 +11,7 @@ import {
   DollarSign,
   Loader2,
   Server,
+  PieChart,
 } from "lucide-react";
 import {
   Sidebar,
@@ -53,6 +54,11 @@ const navItems = [
     icon: DollarSign,
   },
   {
+    title: "Cost Allocation",
+    href: "/cost-allocation",
+    icon: PieChart,
+  },
+  {
     title: "Simulator",
     href: "/simulation",
     icon: FlaskConical,
@@ -66,7 +72,8 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { isConnected, isLoading, prometheusConnected, usingMockData } = useBackendStatus();
+  const { isConnected, isLoading, prometheusConnected, usingMockData } =
+    useBackendStatus();
 
   const getStatusColor = () => {
     if (isLoading) return "bg-yellow-500 animate-pulse";
@@ -111,7 +118,8 @@ export function AppSidebar() {
                     isActive={pathname === item.href}
                     className={cn(
                       "w-full justify-start gap-3 px-3",
-                      pathname === item.href && "bg-accent text-accent-foreground"
+                      pathname === item.href &&
+                        "bg-accent text-accent-foreground",
                     )}
                   >
                     <Link href={item.href}>
@@ -135,7 +143,9 @@ export function AppSidebar() {
           )}
           <div className="flex-1">
             <p className="text-sm font-medium">{getStatusText()}</p>
-            <p className="text-xs text-muted-foreground">{getStatusSubtext()}</p>
+            <p className="text-xs text-muted-foreground">
+              {getStatusSubtext()}
+            </p>
           </div>
         </div>
       </SidebarFooter>

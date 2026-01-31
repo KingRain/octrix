@@ -5,6 +5,7 @@ import healingRouter from "../api/healing.api.js";
 import escalationRouter from "../api/escalation.api.js";
 import simulatorRouter from "../api/simulator.api.js";
 import clusterRouter from "../api/cluster.api.js";
+import costRouter from "../api/cost.api.js";
 import overviewRouter from "./overview.routes.js";
 
 const router = Router();
@@ -15,6 +16,7 @@ router.use("/healing", healingRouter);
 router.use("/escalation", escalationRouter);
 router.use("/simulator", simulatorRouter);
 router.use("/cluster", clusterRouter);
+router.use("/costs", costRouter);
 router.use("/overview", overviewRouter);
 
 router.get("/health", async (_req, res) => {

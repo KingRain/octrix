@@ -42,6 +42,11 @@ export function getHealingActionForCategory(category: IncidentCategory): Healing
       description: "Scale deployment horizontally",
       parameters: { scaleBy: 1, maxReplicas: 10 },
     },
+    "high-memory": {
+      type: "patch-memory",
+      description: "Increase memory limit to prevent OOM",
+      parameters: { memoryIncreaseFactor: 1.25, monitorAfterPatch: true },
+    },
     "crash-loop": {
       type: "restart-pod",
       description: "Restart pod with exponential backoff",

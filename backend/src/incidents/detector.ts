@@ -8,7 +8,8 @@ import {
   isAutoHealable,
   shouldEscalate 
 } from "./classifier.js";
-import type { Incident, IncidentStatus, IncidentCategory, IncidentSeverity } from "./types.js";
+import { enrichIncidentWithSLOBurn, type SLOBurnSignals } from "./slo-burn-classifier.js";
+import type { Incident, IncidentStatus, IncidentCategory, IncidentSeverity, SLOBurnDriver } from "./types.js";
 import { kubernetesService } from "../services/kubernetes.service.js";
 
 const logger = createChildLogger("incident-detector");
@@ -254,15 +255,36 @@ class IncidentDetector {
     suggestedAction: string;
     productionBehavior: string;
     metrics: Record<string, number | string | boolean>;
+    sloBurnSignals?: Partial<SLOBurnSignals>;
   }): Incident {
-    const incident: Incident = {
+    // Create base incident
+    const baseIncident: Incident = {
       id: uuidv4(),
-      ...params,
+      title: params.title,
+      description: params.description,
+      severity: params.severity,
+      category: params.category,
+      resource: params.resource,
+      resourceType: params.resourceType,
+      namespace: params.namespace,
+      autoHealable: params.autoHealable,
+      suggestedAction: params.suggestedAction,
+      productionBehavior: params.productionBehavior,
+      metrics: params.metrics,
       status: "open",
       detectedAt: new Date().toISOString(),
       autoHealingAttempted: false,
       escalated: false,
       relatedAlerts: [],
+    };
+
+    // Dynamically classify SLO burn driver
+    const sloBurnClassification = enrichIncidentWithSLOBurn(baseIncident, params.sloBurnSignals);
+    const incident: Incident = {
+      ...baseIncident,
+      sloBurnDriver: sloBurnClassification.sloBurnDriver,
+      sloBurnEvidence: sloBurnClassification.evidence,
+      sloBurnConfidence: sloBurnClassification.confidence,
     };
 
     this.incidents.set(incident.id, incident);
@@ -273,7 +295,9 @@ class IncidentDetector {
       category: incident.category,
       resource: incident.resource,
       autoHealable: incident.autoHealable,
-    }, "Incident detected");
+      sloBurnDriver: incident.sloBurnDriver,
+      sloBurnConfidence: incident.sloBurnConfidence,
+    }, "Incident detected with SLO burn classification");
 
     return incident;
   }

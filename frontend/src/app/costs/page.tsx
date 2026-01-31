@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TrendingDown,
   TrendingUp,
-  ArrowDownRight,
-  ArrowUpRight,
-  ChevronDown,
-  ArrowUpFromLine,
-  Circle,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -28,63 +31,216 @@ import {
   LineChart,
   Bar,
   BarChart,
-  ReferenceDot,
+  Cell,
 } from "recharts";
+import Link from "next/link";
 
-const costSavingsData = [
-  { date: "04/16", before: 180, after: 175 },
-  { date: "04/19", before: 175, after: 170 },
-  { date: "04/20", before: 172, after: 165 },
-  { date: "04/21", before: 165, after: 120 },
-  { date: "04/22", before: 120, after: 115 },
-  { date: "04/23", before: 115, after: 110 },
-  { date: "04/25", before: 110, after: 105 },
-  { date: "04/23", before: 105, after: 100 },
-  { date: "04/24", before: 100, after: 95 },
-];
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
-const efficiencyTrendsData = [
-  { date: "04/18", value: 82 },
-  { date: "04/16", value: 90 },
-  { date: "04/23", value: 78 },
-  { date: "04/22", value: 72 },
-  { date: "04/16", value: 25 },
-  { date: "04/03", value: 340 },
-  { date: "04/14", value: 340 },
-];
+interface CostMetrics {
+  estimatedCostBefore: number;
+  estimatedCostAfter: number;
+  totalCostSaved: number;
+  totalCostIncurred: number;
+  scaleDownCount: number;
+  scaleUpCount: number;
+  optimizationPercent: number;
+}
 
-function formatCurrency(value: number): string {
-  return `$${value.toFixed(2)}`;
+interface CostIssue {
+  id: string;
+  title: string;
+  status: "active" | "optimized" | "pending";
+  monthlyCostImpact: number;
+  cause: string;
+  scope: string;
+  fix: string;
+  fixUrl?: string;
+  severity: "high" | "medium" | "low";
+  category: string;
+}
+
+interface TrendDataPoint {
+  date: string;
+  before: number;
+  after: number;
+}
+
+interface CostSummary {
+  metrics: CostMetrics;
+  totalAvoidableCost: number;
+  primaryCostDriver: string;
+  issues: CostIssue[];
+  trends: TrendDataPoint[];
+}
+
+function formatCurrency(value: number, currency: string = "$"): string {
+  if (value >= 1000) {
+    return `${currency}${(value / 1000).toFixed(1)}k`;
+  }
+  return `${currency}${value.toFixed(2)}`;
+}
+
+function formatRupees(value: number): string {
+  if (value >= 1000) {
+    return `₹${(value / 1000).toFixed(1)}k`;
+  }
+  return `₹${value.toFixed(0)}`;
 }
 
 export default function CostsPage() {
   const [deployment, setDeployment] = useState("all");
   const [action, setAction] = useState("all");
   const [timeRange, setTimeRange] = useState("7d");
+  const [isLoading, setIsLoading] = useState(true);
+  const [costData, setCostData] = useState<CostSummary | null>(null);
+  const [efficiencyData, setEfficiencyData] = useState<
+    Array<{ date: string; value: number }>
+  >([]);
 
-  const estimatedCostBefore = 152.30;
-  const estimatedCostAfter = 137.50;
-  const totalCostSaved = 475.90;
-  const totalCostIncurred = 86.10;
-  const scaleDownSavings = 514.40;
-  const scaleDownCount = 29;
-  const scaleUpCosts = 38.50;
-  const scaleUpCount = 17;
-  const netSavings = 475.90;
-  const optimizationPercent = -9.6;
+  const fetchCostData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${BACKEND_URL}/api/v1/costs/summary`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setCostData(data.data);
+
+        // Generate efficiency chart data
+        const effData = data.data.trends.map(
+          (t: TrendDataPoint, idx: number) => ({
+            date: t.date,
+            value: Math.round((t.after / t.before) * 100),
+          }),
+        );
+        setEfficiencyData(effData);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cost data:", error);
+      // Use fallback data
+      setCostData({
+        metrics: {
+          estimatedCostBefore: 152.3,
+          estimatedCostAfter: 137.5,
+          totalCostSaved: 475.9,
+          totalCostIncurred: 86.1,
+          scaleDownCount: 29,
+          scaleUpCount: 17,
+          optimizationPercent: -9.6,
+        },
+        totalAvoidableCost: 51500,
+        primaryCostDriver: "Scheduling & Over-Provisioning",
+        issues: [
+          {
+            id: "1",
+            title: "Pods Unschedulable",
+            status: "active",
+            monthlyCostImpact: 18400,
+            cause: "Pending pods triggered node scale-up",
+            scope: "7 pods · 2 nodes",
+            fix: "Reduce requests or fix scheduling constraints",
+            severity: "high",
+            category: "scheduling",
+          },
+          {
+            id: "2",
+            title: "Over-Provisioned Resources",
+            status: "optimized",
+            monthlyCostImpact: 9600,
+            cause: "Requests far exceed actual usage",
+            scope: "12 pods",
+            fix: "Right-size CPU & memory requests",
+            severity: "medium",
+            category: "over-provisioning",
+          },
+          {
+            id: "3",
+            title: "DaemonSet Overhead",
+            status: "active",
+            monthlyCostImpact: 14000,
+            cause: "Agents consuming node capacity",
+            scope: "6 DaemonSets / node",
+            fix: "Limit or optimize heavy agents",
+            severity: "high",
+            category: "daemonset",
+          },
+          {
+            id: "4",
+            title: "PVC Misconfiguration",
+            status: "active",
+            monthlyCostImpact: 9500,
+            cause: "Pods blocked, causing scaling pressure",
+            scope: "4 pods",
+            fix: "Rebind or reschedule PVCs",
+            severity: "medium",
+            category: "pvc",
+          },
+        ],
+        trends: [
+          { date: "01/24", before: 180, after: 170 },
+          { date: "01/25", before: 175, after: 160 },
+          { date: "01/26", before: 170, after: 155 },
+          { date: "01/27", before: 165, after: 145 },
+          { date: "01/28", before: 160, after: 140 },
+          { date: "01/29", before: 155, after: 138 },
+          { date: "01/30", before: 152, after: 137 },
+        ],
+      });
+      setEfficiencyData([
+        { date: "01/24", value: 82 },
+        { date: "01/25", value: 85 },
+        { date: "01/26", value: 78 },
+        { date: "01/27", value: 90 },
+        { date: "01/28", value: 88 },
+        { date: "01/29", value: 92 },
+        { date: "01/30", value: 95 },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCostData();
+    const interval = setInterval(fetchCostData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (isLoading || !costData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const { metrics, totalAvoidableCost, primaryCostDriver, issues, trends } =
+    costData;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Cost & Efficiency</h1>
-        <p className="text-sm text-muted-foreground">
-          Cost insights and resource optimization overview.
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Cost & Efficiency
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Cost insights and resource optimization overview.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchCostData}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
       </div>
 
+      {/* Filters */}
       <div className="flex items-center gap-3">
         <Select value={deployment} onValueChange={setDeployment}>
-          <SelectTrigger className="w-[160px] bg-[#1a2332] border-[#2a3a4a]">
+          <SelectTrigger className="w-[160px] bg-[#1a2332] border-[#2a3a4a] h-9">
             <SelectValue placeholder="Deployment: All" />
           </SelectTrigger>
           <SelectContent>
@@ -96,7 +252,7 @@ export default function CostsPage() {
         </Select>
 
         <Select value={action} onValueChange={setAction}>
-          <SelectTrigger className="w-[140px] bg-[#1a2332] border-[#2a3a4a]">
+          <SelectTrigger className="w-[140px] bg-[#1a2332] border-[#2a3a4a] h-9">
             <SelectValue placeholder="Action: All" />
           </SelectTrigger>
           <SelectContent>
@@ -107,7 +263,7 @@ export default function CostsPage() {
         </Select>
 
         <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px] bg-[#1a2332] border-[#2a3a4a]">
+          <SelectTrigger className="w-[140px] bg-[#1a2332] border-[#2a3a4a] h-9">
             <SelectValue placeholder="Time Range" />
           </SelectTrigger>
           <SelectContent>
@@ -118,163 +274,270 @@ export default function CostsPage() {
         </Select>
       </div>
 
+      {/* Summary Metrics Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Summary Metrics</h2>
-        <span className="text-sm text-green-400">{optimizationPercent}% from optimizations</span>
+        <span className="text-sm text-emerald-400 font-medium">
+          {metrics.optimizationPercent}% from optimizations
+        </span>
       </div>
 
+      {/* Summary Metrics Cards */}
       <div className="grid gap-4 grid-cols-4">
         <Card className="bg-[#0d1520] border-[#1a2a3a]">
           <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">Estimated Cost Before</p>
-            <p className="text-3xl font-semibold text-white">${estimatedCostBefore.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">Estimated Cost After</p>
-            <p className="text-3xl font-semibold text-white">${estimatedCostAfter.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">Total Cost Saved</p>
-            <p className="text-3xl font-semibold text-green-400">
-              ${totalCostSaved.toFixed(2)} <TrendingUp className="inline h-4 w-4" />
+            <p className="text-xs text-muted-foreground mb-1">
+              Estimated Cost Before
             </p>
-            <p className="text-xs text-muted-foreground">via {scaleDownCount} scale-down actions</p>
+            <p className="text-3xl font-semibold text-white">
+              ${metrics.estimatedCostBefore.toFixed(2)}
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-[#0d1520] border-[#1a2a3a]">
           <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">Total Cost Incurred</p>
-            <p className="text-3xl font-semibold text-orange-400">${totalCostIncurred.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">via {scaleUpCount} scale-up actions</p>
+            <p className="text-xs text-muted-foreground mb-1">
+              Estimated Cost After
+            </p>
+            <p className="text-3xl font-semibold text-white">
+              ${metrics.estimatedCostAfter.toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#0d1520] border-[#1a2a3a]">
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-muted-foreground mb-1">
+              Total Cost Saved
+            </p>
+            <p className="text-3xl font-semibold text-emerald-400">
+              ${metrics.totalCostSaved.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              via {metrics.scaleDownCount} scale-down actions
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#0d1520] border-[#1a2a3a]">
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-muted-foreground mb-1">
+              Total Cost Incurred
+            </p>
+            <p className="text-3xl font-semibold text-orange-400">
+              ${metrics.totalCostIncurred.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              via {metrics.scaleUpCount} scale-up actions
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-medium">Cost Savings Breakdown</h2>
-          
-          <div className="grid gap-4 grid-cols-2">
-            <Card className="bg-[#0d1520] border-[#1a2a3a]">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-                  <span className="text-sm text-muted-foreground">Scale Down Savings</span>
-                  <TrendingDown className="h-4 w-4 text-muted-foreground ml-auto" />
-                </div>
-                <p className="text-3xl font-semibold text-green-400">${scaleDownSavings.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">+{scaleDownCount} scale-downs</p>
-              </CardContent>
-            </Card>
+      {/* Cost Savings Breakdown Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-medium">Cost Savings Breakdown</h2>
 
-            <Card className="bg-[#0d1520] border-[#1a2a3a]">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-3 w-3 border-2 border-blue-400 rounded-sm" />
-                  <span className="text-sm text-muted-foreground">Scale Up Costs</span>
-                  <ArrowUpFromLine className="h-4 w-4 text-muted-foreground ml-auto" />
-                </div>
-                <p className="text-3xl font-semibold text-blue-400">${scaleUpCosts.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">+{scaleUpCount} scale-ups</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="bg-[#0a1a15] border border-[#1a3a2a] rounded-lg py-3 px-4 text-center">
-            <span className="text-green-400 font-semibold text-lg">${netSavings.toFixed(2)}</span>
-            <span className="text-muted-foreground ml-2">net savings</span>
-          </div>
+        {/* Avoidable Cost Banner */}
+        <div className="bg-gradient-to-r from-[#0a1a15] to-[#0d1520] border border-[#1a3a2a] rounded-lg py-3 px-4 flex items-center justify-between">
+          <span className="text-emerald-400 font-medium">
+            Total Avoidable Cost: {formatRupees(totalAvoidableCost)} / month
+          </span>
+          <span className="text-sm text-muted-foreground">
+            Primary Cost Driver:{" "}
+            <span className="text-amber-400">{primaryCostDriver}</span>
+          </span>
         </div>
 
+        {/* Issue Cards Grid */}
+        <div className="grid gap-4 grid-cols-2">
+          {issues.map((issue) => (
+            <Card
+              key={issue.id}
+              className={cn(
+                "border transition-all duration-200 hover:border-opacity-60",
+                issue.status === "optimized"
+                  ? "bg-[#0d1520] border-emerald-500/20"
+                  : "bg-[#0d1520] border-[#1a2a3a]",
+              )}
+            >
+              <CardContent className="p-5">
+                {/* Header with title and status */}
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="font-medium text-white">{issue.title}</h3>
+                  <Badge
+                    className={cn(
+                      "text-xs font-medium px-2 py-0.5",
+                      issue.status === "active" &&
+                        "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+                      issue.status === "optimized" &&
+                        "bg-blue-500/20 text-blue-400 border-blue-500/30",
+                      issue.status === "pending" &&
+                        "bg-amber-500/20 text-amber-400 border-amber-500/30",
+                    )}
+                  >
+                    {issue.status.toUpperCase()}
+                  </Badge>
+                </div>
+
+                {/* Monthly Cost Impact */}
+                <div className="mb-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                    Monthly Cost Impact
+                  </p>
+                  <p className="text-2xl font-semibold text-white">
+                    {formatRupees(issue.monthlyCostImpact)}
+                  </p>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="text-muted-foreground w-12 shrink-0">
+                      Cause:
+                    </span>
+                    <span className="text-gray-300">{issue.cause}</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-muted-foreground w-12 shrink-0">
+                      Scope:
+                    </span>
+                    <span className="text-gray-300">{issue.scope}</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-muted-foreground w-12 shrink-0">
+                      Fix:
+                    </span>
+                    {issue.fixUrl ? (
+                      <Link
+                        href={issue.fixUrl}
+                        className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
+                      >
+                        {issue.fix}
+                      </Link>
+                    ) : (
+                      <span className="text-cyan-400">{issue.fix}</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Cost Trend Chart - Takes 2 columns */}
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-lg font-medium">Cost Trend Over Time</h2>
+          <Card className="bg-[#0d1520] border-[#1a2a3a]">
+            <CardContent className="p-4">
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trends}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "#6b7280", fontSize: 11 }}
+                      axisLine={{ stroke: "#2a3a4a" }}
+                      tickLine={false}
+                    />
+                    <YAxis hide domain={["dataMin - 20", "dataMax + 20"]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1a2332",
+                        border: "1px solid #2a3a4a",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                      }}
+                      labelStyle={{ color: "#9ca3af" }}
+                      formatter={(value: number, name: string) => [
+                        `$${value.toFixed(2)}`,
+                        name === "before"
+                          ? "Before Optimization"
+                          : "After Optimization",
+                      ]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="before"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={false}
+                      name="before"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="after"
+                      stroke="#22c55e"
+                      strokeWidth={2}
+                      dot={false}
+                      name="after"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#2a3a4a]">
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-4 bg-blue-500 rounded" />
+                  <span className="text-xs text-muted-foreground">
+                    Cost Before Actions
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-4 bg-emerald-500 rounded" />
+                  <span className="text-xs text-muted-foreground">
+                    Cost After Actions
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Efficiency Trends Chart */}
         <div className="space-y-4">
           <h2 className="text-lg font-medium">Efficiency Trends</h2>
-          <Card className="bg-[#0d1520] border-[#1a2a3a] h-[200px]">
+          <Card className="bg-[#0d1520] border-[#1a2a3a] h-[280px]">
             <CardContent className="p-4 h-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={efficiencyTrendsData}>
-                  <XAxis 
-                    dataKey="date" 
+                <BarChart data={efficiencyData} barCategoryGap="20%">
+                  <XAxis
+                    dataKey="date"
                     tick={{ fill: "#6b7280", fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <YAxis hide />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#22c55e" 
-                    radius={[2, 2, 0, 0]}
-                    maxBarSize={30}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="text-lg font-medium">Cost Savings Breakdown</h2>
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
-          <CardContent className="p-4">
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={costSavingsData}>
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fill: "#6b7280", fontSize: 11 }}
-                    axisLine={{ stroke: "#2a3a4a" }}
-                    tickLine={false}
-                  />
-                  <YAxis hide />
+                  <YAxis hide domain={[0, 100]} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#1a2332",
                       border: "1px solid #2a3a4a",
                       borderRadius: "8px",
                     }}
+                    formatter={(value: number) => [`${value}%`, "Efficiency"]}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="before"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Cost Before Actions"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="after"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Cost After Actions"
-                  />
-                  <ReferenceDot x="04/20" y={165} r={8} fill="#eab308" stroke="none" />
-                </LineChart>
+                  <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={24}>
+                    {efficiencyData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={
+                          entry.value >= 85
+                            ? "#22c55e"
+                            : entry.value >= 70
+                              ? "#eab308"
+                              : "#ef4444"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
-            </div>
-            <div className="flex items-center justify-center gap-2 mt-2 text-xs text-muted-foreground">
-              <span>Over-provisioning Optimized</span>
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-3 pt-3 border-t border-[#2a3a4a]">
-              <div className="flex items-center gap-2">
-                <div className="h-0.5 w-4 bg-blue-500" />
-                <span className="text-xs text-muted-foreground">Cost Before Actions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-0.5 w-4 bg-green-500" />
-                <span className="text-xs text-muted-foreground">Cost After Actions</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

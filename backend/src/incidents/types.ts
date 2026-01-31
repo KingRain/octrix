@@ -4,6 +4,7 @@ export type IncidentStatus = "open" | "acknowledged" | "healing" | "escalated" |
 export type IncidentCategory =
   | "oom-killed"
   | "high-cpu"
+  | "high-memory"
   | "crash-loop"
   | "pod-throttling"
   | "underutilization"
@@ -16,6 +17,14 @@ export type IncidentCategory =
   | "multi-service-failure"
   | "node-not-ready"
   | "node-pressure";
+
+/**
+ * SLO Burn Driver indicates the primary cause of SLO budget consumption:
+ * - traffic-surge: Load increase is the primary cause (RPS spike, scale-out pressure)
+ * - degradation: Quality regression is the primary cause (bugs, dependency failures, config issues)
+ * - mixed: Multiple contributing factors or unclear primary cause
+ */
+export type SLOBurnDriver = "traffic-surge" | "degradation" | "mixed";
 
 export interface Incident {
   id: string;
@@ -39,6 +48,10 @@ export interface Incident {
   relatedAlerts: string[];
   suggestedAction: string;
   productionBehavior: string;
+  // Dynamic SLO burn driver classification
+  sloBurnDriver?: SLOBurnDriver;
+  sloBurnEvidence?: string;
+  sloBurnConfidence?: number;
 }
 
 export interface IncidentScenario {
