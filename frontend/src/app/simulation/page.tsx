@@ -186,13 +186,13 @@ function CustomPodSpawner({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium">Target Cluster/Service</Label>
-            <Select value={selectedCluster} onValueChange={setSelectedCluster}>
+            <Select value={selectedCluster || ""} onValueChange={setSelectedCluster}>
               <SelectTrigger className="bg-background/50 border-border hover:border-green-500/50 transition-colors">
                 <SelectValue placeholder="Select cluster" />
               </SelectTrigger>
               <SelectContent>
-                {services.map((s) => (
-                  <SelectItem key={s.name} value={s.name}>
+                {services.map((s, index) => (
+                  <SelectItem key={`${s.name}-${s.namespace}-${index}`} value={s.name}>
                     {s.name}
                   </SelectItem>
                 ))}

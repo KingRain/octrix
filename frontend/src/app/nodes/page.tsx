@@ -254,7 +254,7 @@ export default function NodesPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-900 font-mono text-sm hover:underline cursor-pointer">
+                      <span className="text-blue-600 font-mono text-sm hover:underline cursor-pointer">
                         {node.nodeName}
                       </span>
                       {node.clusterName && (
@@ -364,7 +364,7 @@ export default function NodesPage() {
                     key={pod.id}
                     className="border-b border-gray-100 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    <td className="px-4 py-3 text-sm font-mono text-blue-600">
                       {pod.name}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
@@ -388,7 +388,7 @@ export default function NodesPage() {
                         {pod.status || "unknown"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    <td className="px-4 py-3 text-sm text-blue-600">
                       {pod.nodeName || "unknown"}
                     </td>
                     <td className="px-4 py-3">

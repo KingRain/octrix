@@ -160,10 +160,10 @@ export function OOMAlertPopup({ alerts, onDismiss }: OOMAlertProps) {
             <div className="px-4 py-3 bg-white/50 border-t border-black/5">
               <p className="text-xs font-medium text-gray-700">
                 {urgencyLevel === "critical" 
-                  ? "🚨 Pod will run out of memory very soon. Immediate action required."
+                  ? "Pod will run out of memory very soon. Immediate action required."
                   : urgencyLevel === "warning"
-                  ? "⚠️ Pod memory usage is growing rapidly. Monitor closely."
-                  : "ℹ️ Pod memory usage is increasing. Keep monitoring."
+                  ? "Pod memory usage is growing rapidly. Monitor closely."
+                  : "Pod memory usage is increasing. Keep monitoring."
                 }
               </p>
             </div>

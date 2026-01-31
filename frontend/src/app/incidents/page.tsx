@@ -679,11 +679,34 @@ export default function IncidentsPage() {
   const { incidents, stats, isLoading, error, refetch, clearHistory } =
     useIncidents();
   const [isClearing, setIsClearing] = useState(false);
-  const { events: timelineEvents, isLoading: timelineLoading, clear: clearTimeline } = useTimeline();
+
+  // Convert incidents to timeline events
+  const timelineEvents: TimelineEvent[] = useMemo(() => {
+    return incidents.map((incident) => {
+      const timestamp = new Date(incident.detectedAt);
+      const time = timestamp.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      return {
+        id: `incident-${incident.id}`,
+        time,
+        type: incident.status === "resolved" ? "Resolved" : "Incident",
+        service: incident.resource,
+        message: incident.title,
+      };
+    }).sort((a, b) => {
+      const timeA = new Date(`1970-01-01 ${a.time}`).getTime();
+      const timeB = new Date(`1970-01-01 ${b.time}`).getTime();
+      return timeB - timeA;
+    });
+  }, [incidents]);
 
   const handleClearHistory = async () => {
     setIsClearing(true);
-    await Promise.all([clearHistory(), clearTimeline()]);
+    await clearHistory();
     setIsClearing(false);
   };
 
@@ -777,11 +800,7 @@ export default function IncidentsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {timelineLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : timelineEvents.length === 0 ? (
+              {incidents.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8 text-sm">
                   No activity yet
                 </div>

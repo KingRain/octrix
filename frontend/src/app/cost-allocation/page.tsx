@@ -288,7 +288,7 @@ export default function OperationalCostRiskPage() {
           <CardContent>
             <div className="text-3xl font-bold">
               {data?.runRatePerHour !== null && data?.runRatePerHour !== undefined
-                ? `$${data.runRatePerHour.toFixed(2)}/hr`
+                ? `₹${data.runRatePerHour.toFixed(2)}/hr`
                 : "Not configured"}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -385,7 +385,7 @@ export default function OperationalCostRiskPage() {
                       {getSortIcon("status")}
                     </div>
                   </TableHead>
-                  <TableHead className="text-right">Est. $/hr</TableHead>
+                  <TableHead className="text-right">Est. ₹/hr</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -421,7 +421,7 @@ export default function OperationalCostRiskPage() {
                     <TableCell>{getStatusBadge(node.status)}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {node.estimatedCostPerHour !== undefined
-                        ? `$${node.estimatedCostPerHour.toFixed(2)}`
+                        ? `₹${node.estimatedCostPerHour.toFixed(2)}`
                         : "-"}
                     </TableCell>
                   </TableRow>

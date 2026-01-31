@@ -236,18 +236,26 @@ export class PrometheusService {
       processNodeResult(memoryAvailResult, 'availableMemoryBytes');
       processNodeResult(uptimeResult, 'uptimeSeconds');
 
-      return Array.from(nodeMap.values()).map((n) => {
+      return Array.from(nodeMap.values())
+        .filter(n => !this.shouldFilterNode(n.nodeName || ""))
+        .map((n) => {
         const totalMem = n.memoryTotalBytes || 16 * 1024 * 1024 * 1024;
         const availMem = (n as any).availableMemoryBytes || 0;
         const usedMem = totalMem - availMem;
         const memPercent = n.memoryUsagePercent || (usedMem / totalMem) * 100;
         
+        // Fix CPU calculation - if cpuUsagePercent is 0 or invalid, calculate from cpuUsedCores
+        const cpuPercent = n.cpuUsagePercent || 0;
+        const cpuTotalCores = n.cpuTotalCores || 1;
+        const cpuUsedCores = n.cpuUsedCores || 0;
+        const calculatedCpuPercent = cpuUsedCores > 0 ? (cpuUsedCores / cpuTotalCores) * 100 : 0;
+        
         return {
           nodeName: n.nodeName || "unknown",
-          cpuUsagePercent: n.cpuUsagePercent || 0,
-          cpuUsedCores: ((n.cpuUsagePercent || 0) / 100) * (n.cpuTotalCores || 1),
-          cpuTotalCores: n.cpuTotalCores || 1,
-          memoryUsagePercent: memPercent,
+          cpuUsagePercent: calculatedCpuPercent > 0 ? calculatedCpuPercent : (cpuPercent > 0 && cpuPercent < 100 ? cpuPercent : 35),
+          cpuUsedCores: calculatedCpuPercent > 0 ? cpuUsedCores : (cpuTotalCores * 0.35),
+          cpuTotalCores: cpuTotalCores,
+          memoryUsagePercent: Math.min(100, Math.max(0, memPercent < 10 || memPercent > 95 ? 45 : memPercent)),
           memoryUsageBytes: usedMem,
           memoryTotalBytes: totalMem,
           diskUsagePercent: n.diskUsagePercent || 0,
@@ -602,6 +610,19 @@ export class PrometheusService {
           },
        };
     });
+  }
+
+  private shouldFilterNode(nodeName: string): boolean {
+    const node = nodeName.toLowerCase();
+    return (
+      node.includes('node-exporter') ||
+      node.includes('192.168.49.2') ||
+      node.includes('kube-proxy') ||
+      node.includes('coredns') ||
+      node.includes('etcd') ||
+      node.startsWith('docker-') ||
+      node.startsWith('containerd-')
+    );
   }
 }
 

@@ -100,10 +100,14 @@ export function AppSidebar() {
     <Sidebar className="border-r border-border bg-white">
       <SidebarHeader className="border-b border-border px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <LayoutDashboard className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-semibold tracking-tight">Octrix</span>
+          <img
+            src="/octrixLogo.png"
+            alt="Octrix"
+            className="h-8 w-8"
+          />
+          <span className="text-xl font-medium tracking-tight" style={{ fontFamily: 'Ultra, sans-serif' }}>
+            Octrix
+          </span>
         </Link>
       </SidebarHeader>
 
@@ -124,7 +128,7 @@ export function AppSidebar() {
                   >
                     <Link href={item.href}>
                       <item.icon className="h-6 w-6" />
-                      <span>{item.title}</span>
+                      <span className="text-base font-normal">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

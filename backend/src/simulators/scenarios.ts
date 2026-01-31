@@ -204,7 +204,7 @@ export const DEFAULT_SCENARIOS: Omit<SimulationScenario, "id" | "createdAt">[] =
   },
   // Silent Failures
   {
-    name: "Pod Running but App Broken",
+    name: "Broken App (Latency)",
     description: "App responds slowly/incorrectly while Pod status remains Running",
     type: "pod-running-app-broken",
     incidentCategory: "pod-running-app-broken" as IncidentCategory,
@@ -250,19 +250,7 @@ export const DEFAULT_SCENARIOS: Omit<SimulationScenario, "id" | "createdAt">[] =
     localSimulation: "Block egress traffic with NetworkPolicy",
     parameters: { packetLoss: 100, dnsFail: true },
     duration: 120,
-  },
-  {
-    name: "Custom OOM Pod Generator",
-    description: "Spawn a custom pod with specific memory limits",
-    type: "custom-oom",
-    incidentCategory: "oom-killed",
-    severity: "low",
-    autoHealable: true,
-    productionBehavior: "Customizable memory leak simulation",
-    localSimulation: "Spawns a pod with user-defined constraints",
-    parameters: { memoryLimitMi: 128, highActivity: false },
-    duration: 300,
-  },
+  }
 ];
 
 class ScenarioManager {

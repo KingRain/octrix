@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import {
-  TrendingDown,
-  TrendingUp,
-  ExternalLink,
   Loader2,
   RefreshCw,
   AlertCircle,
-  CheckCircle2,
-  Clock,
   Server,
+  Cpu,
+  HardDrive,
+  TrendingDown,
+  TrendingUp,
+  DollarSign,
+  BarChart3,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ResponsiveContainer,
   XAxis,
@@ -30,26 +32,18 @@ import {
   Tooltip,
   Line,
   LineChart,
-  Bar,
   BarChart,
+  Bar,
   Cell,
+  PieChart,
+  Pie,
 } from "recharts";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { useNodeUtilization } from "@/hooks/use-node-utilization";
+import { NodeUtilizationSection } from "@/components/costs/node-utilization-section";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-
-interface NodeMetrics {
-  nodeName: string;
-  cpuUsagePercent: number;
-  cpuUsedCores: number;
-  cpuTotalCores: number;
-  memoryUsagePercent: number;
-  memoryUsageBytes: number;
-  memoryTotalBytes: number;
-  podCount: number;
-  uptimeSeconds: number;
-}
 
 interface CostMetrics {
   estimatedCostBefore: number;
@@ -88,7 +82,7 @@ interface CostSummary {
   trends: TrendDataPoint[];
 }
 
-function formatCurrency(value: number, currency: string = "$"): string {
+function formatCurrency(value: number, currency: string = "₹"): string {
   if (value >= 1000) {
     return `${currency}${(value / 1000).toFixed(1)}k`;
   }
@@ -111,29 +105,15 @@ export default function CostsPage() {
   const [efficiencyData, setEfficiencyData] = useState<
     Array<{ date: string; value: number }>
   >([]);
-  const [minicubeNode, setMinicubeNode] = useState<NodeMetrics | null>(null);
 
   const {
     data: nodeUtilizationData,
-    isLoading: nodeUtilLoading,
     refetch: refetchNodeUtil,
   } = useNodeUtilization();
 
   const fetchCostData = async () => {
     try {
       setIsLoading(true);
-      
-      // Fetch minicube node data
-      const nodesRes = await fetch(`${BACKEND_URL}/api/v1/cluster/nodes`);
-      const nodesData = await nodesRes.json();
-      
-      if (nodesData.success && nodesData.data && nodesData.data.length > 0) {
-        const minicubeNode = nodesData.data.find((node: NodeMetrics) =>
-          node.nodeName.toLowerCase().includes('minikube') ||
-          node.nodeName.toLowerCase().includes('minicube')
-        );
-        setMinicubeNode(minicubeNode || null);
-      }
 
       const response = await fetch(`${BACKEND_URL}/api/v1/costs/summary`);
       const data = await response.json();
@@ -252,353 +232,404 @@ export default function CostsPage() {
         </Select>
       </div>
 
-      {/* Summary Metrics Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Summary Metrics</h2>
-        <span className="text-sm text-success font-medium">
-          {metrics.optimizationPercent}% from optimizations
-        </span>
-      </div>
+      {/* Main Tabs */}
+      <Tabs defaultValue="resource-costs" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="resource-costs" className="flex items-center gap-2">
+            <Server className="h-4 w-4" />
+            Resource Costs
+          </TabsTrigger>
+          <TabsTrigger value="cost-analysis" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Cost Analysis
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Minicube Node Stats */}
-      {minicubeNode && (
-        <div className="bg-white rounded-xl border border-blue-200 p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Server className="h-4 w-4 text-purple-400" />
-            <h2 className="text-sm font-medium text-gray-900">Minicube Node Stats</h2>
-            <span className="text-xs text-gray-500 ml-2">
-              Primary cluster node
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">CPU Usage</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.cpuUsagePercent.toFixed(1)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {minicubeNode.cpuUsedCores.toFixed(3)} / {minicubeNode.cpuTotalCores.toFixed(1)} cores
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">Memory Usage</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.memoryUsagePercent.toFixed(0)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {(minicubeNode.memoryUsageBytes / (1024 * 1024 * 1024)).toFixed(1)} GB / {(minicubeNode.memoryTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">Pods on Node</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.podCount}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total pods running on minicube
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Minicube Node Stats */}
-      {minicubeNode && (
-        <div className="bg-white rounded-xl border border-blue-200 p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Server className="h-4 w-4 text-purple-400" />
-            <h2 className="text-sm font-medium text-gray-900">Minicube Node Stats</h2>
-            <span className="text-xs text-gray-500 ml-2">
-              Primary cluster node
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">CPU Usage</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.cpuUsagePercent.toFixed(1)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {minicubeNode.cpuUsedCores.toFixed(3)} / {minicubeNode.cpuTotalCores.toFixed(1)} cores
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">Memory Usage</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.memoryUsagePercent.toFixed(0)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {(minicubeNode.memoryUsageBytes / (1024 * 1024 * 1024)).toFixed(1)} GB / {(minicubeNode.memoryTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">Pods on Node</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.podCount}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total pods running on minicube
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Minicube Node Stats */}
-      {minicubeNode && (
-        <div className="bg-white rounded-xl border border-blue-200 p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Server className="h-4 w-4 text-purple-400" />
-            <h2 className="text-sm font-medium text-gray-900">Minicube Node Stats</h2>
-            <span className="text-xs text-gray-500 ml-2">
-              Primary cluster node
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">CPU Usage</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.cpuUsagePercent.toFixed(1)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {minicubeNode.cpuUsedCores.toFixed(3)} / {minicubeNode.cpuTotalCores.toFixed(1)} cores
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">Memory Usage</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.memoryUsagePercent.toFixed(0)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {(minicubeNode.memoryUsageBytes / (1024 * 1024 * 1024)).toFixed(1)} GB / {(minicubeNode.memoryTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB
-              </p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-muted-foreground mb-1">Pods on Node</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {minicubeNode.podCount}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total pods running on minicube
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Summary Metrics Cards */}
-      <div className="grid gap-4 grid-cols-4">
-        <Card className="bg-card border-border">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">
-              Estimated Cost Before
-            </p>
-            <p className="text-3xl font-semibold text-foreground">
-              {formatRupees(metrics.estimatedCostBefore)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">
-              Estimated Cost After
-            </p>
-            <p className="text-3xl font-semibold text-foreground">
-              {formatRupees(metrics.estimatedCostAfter)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">
-              Total Cost Saved
-            </p>
-            <p className="text-3xl font-semibold text-success">
-              {formatRupees(metrics.totalCostSaved)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              via {metrics.scaleDownCount} scale-down actions
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground mb-1">
-              Total Cost Incurred
-            </p>
-            <p className="text-3xl font-semibold text-warning">
-              {formatRupees(metrics.totalCostIncurred)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              via {metrics.scaleUpCount} scale-up actions
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cost Savings Breakdown Section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-medium">Cost Savings Breakdown</h2>
-
-        {/* Avoidable Cost Banner */}
-        <div className="bg-muted border border-border rounded-lg py-3 px-4 flex items-center justify-between">
-          <span className="text-success font-medium">
-            Total Avoidable Cost: {formatRupees(totalAvoidableCost)} / month
-          </span>
-          <span className="text-sm text-muted-foreground">
-            Primary Cost Driver:{" "}
-            <span className="text-primary">{primaryCostDriver}</span>
-          </span>
-        </div>
-
-        {/* Issue Cards Grid */}
-        <div className="grid gap-4 grid-cols-2">
-          {issues.map((issue) => (
-            <Card
-              key={issue.id}
-              className={cn(
-                "border transition-all duration-200 hover:border-opacity-60",
-                issue.status === "optimized"
-                  ? "bg-card border-success/20"
-                  : "bg-card border-border",
-              )}
-            >
-              <CardContent className="p-5">
-                {/* Header with title and status */}
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-medium text-foreground">{issue.title}</h3>
-                  <Badge
-                    className={cn(
-                      "text-xs font-medium px-2 py-0.5",
-                      issue.status === "active" &&
-                        "bg-success/20 text-success border-success/30",
-                      issue.status === "optimized" &&
-                        "bg-primary/20 text-primary border-primary/30",
-                      issue.status === "pending" &&
-                        "bg-warning/20 text-warning border-warning/30",
-                    )}
-                  >
-                    {issue.status.toUpperCase()}
-                  </Badge>
+        {/* Tab 1: Resource Costs - Node utilization and cluster metrics */}
+        <TabsContent value="resource-costs" className="space-y-6">
+          {/* Summary Metrics Cards */}
+          <div className="grid gap-4 grid-cols-4">
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Server className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Total Nodes</p>
                 </div>
+                <p className="text-3xl font-semibold text-foreground">
+                  {nodeUtilizationData?.summary.totalNodes || 0}
+                </p>
+                {nodeUtilizationData && nodeUtilizationData.summary.runRatePerHour > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ₹{nodeUtilizationData.summary.runRatePerHour.toFixed(2)}/hr run-rate
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-                {/* Monthly Cost Impact */}
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                    Monthly Cost Impact
-                  </p>
-                  <p className="text-2xl font-semibold text-foreground">
-                    {formatRupees(issue.monthlyCostImpact)}
-                  </p>
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Cpu className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Avg CPU Utilization</p>
                 </div>
+                <p className="text-3xl font-semibold text-foreground">
+                  {nodeUtilizationData?.summary.avgCpuUtil.toFixed(1) || 0}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  P90: {nodeUtilizationData?.summary.p90CpuUtil.toFixed(1) || 0}%
+                </p>
+              </CardContent>
+            </Card>
 
-                {/* Details */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-start gap-3">
-                    <span className="text-muted-foreground w-12 shrink-0">
-                      Cause:
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <HardDrive className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Avg Memory Utilization</p>
+                </div>
+                <p className="text-3xl font-semibold text-foreground">
+                  {nodeUtilizationData?.summary.avgMemUtil.toFixed(1) || 0}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  P90: {nodeUtilizationData?.summary.p90MemUtil.toFixed(1) || 0}%
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Node Health</p>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold text-foreground">
+                    {nodeUtilizationData?.summary.healthyNodes || 0}
+                  </p>
+                  <span className="text-sm text-muted-foreground">healthy</span>
+                </div>
+                <div className="flex gap-3 mt-1 text-xs">
+                  {nodeUtilizationData && nodeUtilizationData.summary.underutilizedNodes > 0 && (
+                    <span className="text-blue-500">
+                      {nodeUtilizationData.summary.underutilizedNodes} underutilized
                     </span>
-                    <span className="text-muted-foreground">{issue.cause}</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-muted-foreground w-12 shrink-0">
-                      Scope:
+                  )}
+                  {nodeUtilizationData && nodeUtilizationData.summary.saturatedNodes > 0 && (
+                    <span className="text-red-500">
+                      {nodeUtilizationData.summary.saturatedNodes} saturated
                     </span>
-                    <span className="text-muted-foreground">{issue.scope}</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-muted-foreground w-12 shrink-0">
-                      Fix:
-                    </span>
-                    {issue.fixUrl ? (
-                      <Link
-                        href={issue.fixUrl}
-                        className="text-primary hover:text-primary/80 hover:underline transition-colors"
-                      >
-                        {issue.fix}
-                      </Link>
-                    ) : (
-                      <span className="text-primary">{issue.fix}</span>
-                    )}
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Charts Section */}
-      <div className="space-y-4">
-        {/* Cost Trend Chart - Full width */}
-        <h2 className="text-lg font-medium">Cost Trend Over Time</h2>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4">
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trends}>
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                    axisLine={{ stroke: "var(--border)" }}
-                    tickLine={false}
-                  />
-                  <YAxis hide domain={["dataMin - 20", "dataMax + 20"]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--popover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      padding: "8px 12px",
-                    }}
-                    labelStyle={{ color: "var(--muted-foreground)" }}
-                    formatter={(value: number, name: string) => [
-                      `₹${value.toFixed(2)}`,
-                      name === "before"
-                        ? "Before Optimization"
-                        : "After Optimization",
-                    ]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="before"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={false}
-                    name="before"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="after"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    dot={false}
-                    name="after"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+          {/* Node Utilization Table */}
+          {nodeUtilizationData && (
+            <NodeUtilizationSection
+              nodes={nodeUtilizationData.nodes}
+              summary={nodeUtilizationData.summary}
+              insights={nodeUtilizationData.insights}
+              dataQuality={nodeUtilizationData.dataQuality}
+              showOnlyUtilization={true}
+            />
+          )}
+
+          {!nodeUtilizationData && (
+            <Card className="bg-card border-border">
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No node utilization data available</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ensure Prometheus is connected and collecting metrics
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab 2: Cost Analysis - Trends, savings, and optimization issues */}
+        <TabsContent value="cost-analysis" className="space-y-6">
+          {/* Cost Metrics Summary */}
+          <div className="grid gap-4 grid-cols-4">
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Cost Before Optimization</p>
+                </div>
+                <p className="text-3xl font-semibold text-foreground">
+                  {formatRupees(metrics.estimatedCostBefore)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Cost After Optimization</p>
+                </div>
+                <p className="text-3xl font-semibold text-foreground">
+                  {formatRupees(metrics.estimatedCostAfter)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingDown className="w-4 h-4 text-green-500" />
+                  <p className="text-xs text-muted-foreground">Total Saved</p>
+                </div>
+                <p className="text-3xl font-semibold text-green-500">
+                  {formatRupees(metrics.totalCostSaved)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  via {metrics.scaleDownCount} scale-down actions
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-4 h-4 text-amber-500" />
+                  <p className="text-xs text-muted-foreground">Total Incurred</p>
+                </div>
+                <p className="text-3xl font-semibold text-amber-500">
+                  {formatRupees(metrics.totalCostIncurred)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  via {metrics.scaleUpCount} scale-up actions
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Cost Trend Chart */}
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Cost Trend Over Time</CardTitle>
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                  {metrics.optimizationPercent}% optimized
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trends}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                      axisLine={{ stroke: "var(--border)" }}
+                      tickLine={false}
+                    />
+                    <YAxis hide domain={["dataMin - 20", "dataMax + 20"]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--popover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                      }}
+                      labelStyle={{ color: "var(--muted-foreground)" }}
+                      formatter={(value: number, name: string) => [
+                        `₹${value.toFixed(2)}`,
+                        name === "before"
+                          ? "Before Optimization"
+                          : "After Optimization",
+                      ]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="before"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={false}
+                      name="before"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="after"
+                      stroke="#22c55e"
+                      strokeWidth={2}
+                      dot={false}
+                      name="after"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-4 bg-blue-500 rounded" />
+                  <span className="text-xs text-muted-foreground">Cost Before Actions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-0.5 w-4 bg-emerald-500 rounded" />
+                  <span className="text-xs text-muted-foreground">Cost After Actions</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Cost Savings Breakdown */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium">Cost Savings Breakdown</h2>
+              <span className="text-sm text-muted-foreground">
+                Primary Driver: <span className="text-primary font-medium">{primaryCostDriver}</span>
+              </span>
             </div>
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border">
+
+            {/* Avoidable Cost Banner */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg py-3 px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-0.5 w-4 bg-blue-500 rounded" />
-                <span className="text-xs text-muted-foreground">
-                  Cost Before Actions
+                <TrendingDown className="h-5 w-5 text-green-500" />
+                <span className="text-green-600 font-medium">
+                  Total Avoidable Cost: {formatRupees(totalAvoidableCost)} / month
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="h-0.5 w-4 bg-emerald-500 rounded" />
-                <span className="text-xs text-muted-foreground">
-                  Cost After Actions
-                </span>
-              </div>
+              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                {issues.filter(i => i.status === "optimized").length} / {issues.length} optimized
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+
+            {/* Issue Cards Grid */}
+            <div className="grid gap-4 grid-cols-2">
+              {issues.map((issue) => (
+                <Card
+                  key={issue.id}
+                  className={cn(
+                    "border transition-all duration-200 hover:border-opacity-60",
+                    issue.status === "optimized"
+                      ? "bg-card border-green-500/20"
+                      : "bg-card border-border",
+                  )}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="font-medium text-foreground">{issue.title}</h3>
+                      <Badge
+                        className={cn(
+                          "text-xs font-medium px-2 py-0.5",
+                          issue.status === "active" &&
+                            "bg-green-500/20 text-green-600 border-green-500/30",
+                          issue.status === "optimized" &&
+                            "bg-blue-500/20 text-blue-600 border-blue-500/30",
+                          issue.status === "pending" &&
+                            "bg-amber-500/20 text-amber-600 border-amber-500/30",
+                        )}
+                      >
+                        {issue.status.toUpperCase()}
+                      </Badge>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        Monthly Cost Impact
+                      </p>
+                      <p className="text-2xl font-semibold text-foreground">
+                        {formatRupees(issue.monthlyCostImpact)}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-3">
+                        <span className="text-muted-foreground w-12 shrink-0">Cause:</span>
+                        <span className="text-muted-foreground">{issue.cause}</span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="text-muted-foreground w-12 shrink-0">Scope:</span>
+                        <span className="text-muted-foreground">{issue.scope}</span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="text-muted-foreground w-12 shrink-0">Fix:</span>
+                        {issue.fixUrl ? (
+                          <Link
+                            href={issue.fixUrl}
+                            className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                          >
+                            {issue.fix}
+                          </Link>
+                        ) : (
+                          <span className="text-primary">{issue.fix}</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Cost Optimization Insights from Node Data */}
+          {nodeUtilizationData && nodeUtilizationData.insights.length > 0 && (
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Optimization Insights</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {nodeUtilizationData.insights.map((insight) => (
+                    <div
+                      key={insight.id}
+                      className={cn(
+                        "p-4 rounded-lg border",
+                        insight.severity === "high"
+                          ? "bg-red-50 border-red-200 dark:bg-red-500/5 dark:border-red-500/20"
+                          : insight.severity === "medium"
+                          ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-500/5 dark:border-yellow-500/20"
+                          : "bg-blue-50 border-blue-200 dark:bg-blue-500/5 dark:border-blue-500/20"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertCircle
+                          className={cn(
+                            "w-5 h-5 mt-0.5",
+                            insight.severity === "high"
+                              ? "text-red-500"
+                              : insight.severity === "medium"
+                              ? "text-yellow-500"
+                              : "text-blue-500"
+                          )}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-foreground">{insight.title}</h4>
+                            {insight.potentialSavings !== undefined && insight.potentialSavings > 0 && (
+                              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                                <DollarSign className="w-3 h-3 mr-1" />
+                                ~₹{insight.potentialSavings.toFixed(2)}/hr savings
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{insight.detail}</p>
+                          {insight.evidence && insight.evidence.length > 0 && (
+                            <ul className="mt-2 space-y-1">
+                              {insight.evidence.map((item, idx) => (
+                                <li
+                                  key={idx}
+                                  className="text-xs text-muted-foreground flex items-center gap-2"
+                                >
+                                  <span className="w-1 h-1 rounded-full bg-muted-foreground" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
