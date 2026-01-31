@@ -38,7 +38,7 @@ export function UsageGauge({
 
   return (
     <div className="flex flex-col items-center">
-      <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">{label}</p>
       <div className="relative" style={{ width: radius * 2, height: radius }}>
         <svg
           height={radius * 2}

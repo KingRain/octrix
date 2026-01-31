@@ -13,7 +13,12 @@ export type SimulationScenarioType =
   | "configmap-error"
   | "db-failure"
   | "unknown-crash"
-  | "multi-service-failure";
+  | "multi-service-failure"
+  | "pod-running-app-broken"
+  | "readiness-lies"
+  | "config-drift"
+  | "network-blackhole"
+  | "custom-oom";
 
 export interface SimulationScenario {
   id: string;
@@ -195,6 +200,67 @@ export const DEFAULT_SCENARIOS: Omit<SimulationScenario, "id" | "createdAt">[] =
     productionBehavior: "Cascading outage across services",
     localSimulation: "Kill shared dependency service",
     parameters: { targetServices: ["redis", "postgres"], cascadeDelay: 10 },
+    duration: 300,
+  },
+  // Silent Failures
+  {
+    name: "Pod Running but App Broken",
+    description: "App responds slowly/incorrectly while Pod status remains Running",
+    type: "pod-running-app-broken",
+    incidentCategory: "pod-running-app-broken" as IncidentCategory,
+    severity: "high",
+    autoHealable: true,
+    productionBehavior: "High latency, no crashes, simple K8s probes pass",
+    localSimulation: "Inject 5s sleep in API response",
+    parameters: { latencyMs: 5000, cpuThrottle: true },
+    duration: 120,
+  },
+  {
+    name: "Readiness Lies",
+    description: "Readiness probe returns 200 OK while critical dependency is down",
+    type: "readiness-lies",
+    incidentCategory: "readiness-lies" as IncidentCategory,
+    severity: "high",
+    autoHealable: false,
+    productionBehavior: "Traffic routed to broken pods, 500 errors",
+    localSimulation: "Mock /health 200 OK but DB connection fail",
+    parameters: { dependency: "database", probeStatus: 200 },
+    duration: 120,
+  },
+  {
+    name: "Config Drift",
+    description: "Application running with old configuration after ConfigMap update",
+    type: "config-drift",
+    incidentCategory: "config-drift" as IncidentCategory,
+    severity: "medium",
+    autoHealable: true,
+    productionBehavior: "Behavior mismatch, zero Kubernetes signals",
+    localSimulation: "Update ConfigMap without rolling restart",
+    parameters: { configKey: "FEATURE_FLAG", oldValue: "false", newValue: "true" },
+    duration: 300,
+  },
+  {
+    name: "Network Blackhole",
+    description: "Pod cannot reach external dependencies but remains 'Healthy'",
+    type: "network-blackhole",
+    incidentCategory: "network-blackhole" as IncidentCategory,
+    severity: "critical",
+    autoHealable: false,
+    productionBehavior: "DNS/Egress fails, Pod still Running",
+    localSimulation: "Block egress traffic with NetworkPolicy",
+    parameters: { packetLoss: 100, dnsFail: true },
+    duration: 120,
+  },
+  {
+    name: "Custom OOM Pod Generator",
+    description: "Spawn a custom pod with specific memory limits",
+    type: "custom-oom",
+    incidentCategory: "oom-killed",
+    severity: "low",
+    autoHealable: true,
+    productionBehavior: "Customizable memory leak simulation",
+    localSimulation: "Spawns a pod with user-defined constraints",
+    parameters: { memoryLimitMi: 128, highActivity: false },
     duration: 300,
   },
 ];

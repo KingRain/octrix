@@ -7,6 +7,10 @@ import {
   Download,
   ChevronDown,
   ArrowDown,
+  Cpu,
+  HardDrive,
+  Zap,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,6 +30,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  ChartStyle,
+} from "@/components/ui/chart";
 import {
   ResponsiveContainer,
   XAxis,
@@ -333,7 +345,7 @@ function formatCurrency(value: number, currency: string): string {
     GBP: "£",
     INR: "₹",
   };
-  const symbol = symbols[currency] || "$";
+  const symbol = symbols[currency] || "₹";
   return `${symbol}${value.toFixed(2)}`;
 }
 
@@ -341,17 +353,17 @@ function formatCurrency(value: number, currency: string): string {
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#1a2332] border border-[#2a3a4a] rounded-lg p-3 shadow-lg">
-        <p className="text-sm font-medium mb-2 text-gray-300">{label}</p>
+      <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+        <p className="text-sm font-medium mb-2 text-foreground">{label}</p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2 text-xs">
             <div
               className="w-3 h-3 rounded"
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-gray-400">{entry.name}:</span>
-            <span className="text-white font-medium">
-              ${entry.value.toFixed(2)}
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="text-foreground font-medium">
+              ₹{entry.value.toFixed(2)}
             </span>
           </div>
         ))}
@@ -367,7 +379,7 @@ export default function CostAllocationPage() {
   const [dateRange, setDateRange] = useState("last-7-days");
   const [breakdown, setBreakdown] = useState("namespace");
   const [resolution, setResolution] = useState("daily");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [data, setData] = useState<CostAllocationData | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("totalCost");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -521,7 +533,7 @@ export default function CostAllocationPage() {
       </div>
 
       {/* Main Content Card */}
-      <div className="bg-[#0d1520] border border-[#1a2a3a] rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         {/* Chart Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="space-y-1">
@@ -529,7 +541,7 @@ export default function CostAllocationPage() {
               {dateRange === "last-7-days" ? "Last 7 days" : dateRange} by{" "}
               {selectedBreakdownLabel.toLowerCase()} {resolution}
             </h2>
-            <p className="text-sm text-blue-400">
+            <p className="text-sm text-primary">
               <span className="cursor-pointer hover:underline">
                 All Results
               </span>
@@ -555,7 +567,7 @@ export default function CostAllocationPage() {
                 Date Range
               </label>
               <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-[140px] bg-transparent border-[#2a3a4a] h-9">
+                <SelectTrigger className="w-[140px] bg-background border-border h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -570,9 +582,9 @@ export default function CostAllocationPage() {
 
             {/* Breakdown */}
             <div className="space-y-1">
-              <label className="text-xs text-blue-400">Breakdown</label>
+              <label className="text-xs text-primary">Breakdown</label>
               <Select value={breakdown} onValueChange={setBreakdown}>
-                <SelectTrigger className="w-[160px] bg-transparent border-[#2a3a4a] h-9">
+                <SelectTrigger className="w-[160px] bg-background border-border h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -591,7 +603,7 @@ export default function CostAllocationPage() {
                 Resolution
               </label>
               <Select value={resolution} onValueChange={setResolution}>
-                <SelectTrigger className="w-[120px] bg-transparent border-[#2a3a4a] h-9">
+                <SelectTrigger className="w-[120px] bg-background border-border h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -608,7 +620,7 @@ export default function CostAllocationPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Currency</label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="w-[100px] bg-transparent border-[#2a3a4a] h-9">
+                <SelectTrigger className="w-[100px] bg-background border-border h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -631,40 +643,60 @@ export default function CostAllocationPage() {
         </div>
 
         {/* Stacked Bar Chart */}
-        <div className="h-[280px] mb-6">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data?.chartData} barCategoryGap="15%">
-              <XAxis
-                dataKey="date"
-                tick={{ fill: "#6b7280", fontSize: 11 }}
-                axisLine={{ stroke: "#2a3a4a" }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: "#6b7280", fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(value) => value.toFixed(0)}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="cpu" stackId="a" fill="#3b82f6" name="CPU" />
-              <Bar dataKey="gpu" stackId="a" fill="#22c55e" name="GPU" />
-              <Bar dataKey="ram" stackId="a" fill="#f59e0b" name="RAM" />
-              <Bar dataKey="pv" stackId="a" fill="#ef4444" name="PV" />
-              {includeIdleCosts && (
-                <Bar dataKey="idle" stackId="a" fill="#9ca3af" name="Idle" />
-              )}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartContainer config={{
+          cpu: {
+            label: "CPU",
+            icon: Cpu,
+            color: "#3b82f6",
+          },
+          gpu: {
+            label: "GPU",
+            icon: Cpu,
+            color: "#22c55e",
+          },
+          ram: {
+            label: "RAM",
+            icon: HardDrive,
+            color: "#f59e0b",
+          },
+          pv: {
+            label: "PV",
+            icon: Zap,
+            color: "#ef4444",
+          },
+          idle: {
+            label: "Idle",
+            icon: Clock,
+            color: "#9ca3af",
+          },
+        }}>
+          <BarChart data={data?.chartData} barCategoryGap="15%">
+            <XAxis
+              dataKey="date"
+              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              axisLine={{ stroke: "var(--border)" }}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(value) => value.toFixed(0)}
+            />
+            <ChartTooltip content={<CustomTooltip />} />
+            {includeIdleCosts && (
+              <Bar dataKey="idle" stackId="a" name="Idle" />
+            )}
+          </BarChart>
+        </ChartContainer>
 
         {/* Table Header */}
-        <div className="border-t border-[#2a3a4a] pt-4">
+        <div className="border-t border-border pt-4">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-[#2a3a4a] hover:bg-transparent">
+              <TableRow className="border-b border-border hover:bg-transparent">
                 <TableHead
-                  className="text-muted-foreground font-medium cursor-pointer hover:text-white transition-colors"
+                  className="text-muted-foreground font-medium cursor-pointer hover:text-foreground transition-colors"
                   onClick={() => handleSort("name")}
                 >
                   <div className="flex items-center gap-1">
@@ -780,24 +812,24 @@ export default function CostAllocationPage() {
             <TableBody>
               {/* Totals Row */}
               {data?.totals && (
-                <TableRow className="border-b border-[#2a3a4a] bg-[#0a1015] font-medium">
-                  <TableCell className="text-white">Totals</TableCell>
-                  <TableCell className="text-right text-white">
+                <TableRow className="border-b border-border bg-muted/50 font-medium">
+                  <TableCell className="text-foreground">Totals</TableCell>
+                  <TableCell className="text-right text-foreground">
                     {formatCurrency(data.totals.cpu, currency)}
                   </TableCell>
-                  <TableCell className="text-right text-white">
+                  <TableCell className="text-right text-foreground">
                     {formatCurrency(data.totals.gpu, currency)}
                   </TableCell>
-                  <TableCell className="text-right text-white">
+                  <TableCell className="text-right text-foreground">
                     {formatCurrency(data.totals.ram, currency)}
                   </TableCell>
-                  <TableCell className="text-right text-white">
+                  <TableCell className="text-right text-foreground">
                     {formatCurrency(data.totals.pv, currency)}
                   </TableCell>
-                  <TableCell className="text-right text-white">
+                  <TableCell className="text-right text-foreground">
                     {data.totals.efficiency}
                   </TableCell>
-                  <TableCell className="text-right text-white">
+                  <TableCell className="text-right text-foreground">
                     {formatCurrency(data.totals.totalCost, currency)}
                   </TableCell>
                 </TableRow>
@@ -808,7 +840,7 @@ export default function CostAllocationPage() {
                 <TableRow
                   key={item.name}
                   className={cn(
-                    "border-b border-[#1a2a3a] hover:bg-[#1a2332] transition-colors",
+                    "border-b border-border hover:bg-muted transition-colors",
                     item.name === "__idle__" && "text-muted-foreground",
                   )}
                 >
@@ -816,7 +848,7 @@ export default function CostAllocationPage() {
                     className={cn(
                       item.name === "__idle__"
                         ? "text-muted-foreground"
-                        : "text-white",
+                        : "text-foreground",
                     )}
                   >
                     {item.name}
@@ -836,7 +868,7 @@ export default function CostAllocationPage() {
                   <TableCell className="text-right">
                     {item.efficiency}
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-right text-muted-foreground font-medium">
                     {formatCurrency(item.totalCost, currency)}
                   </TableCell>
                 </TableRow>

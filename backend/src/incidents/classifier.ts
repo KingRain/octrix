@@ -108,6 +108,11 @@ export function classifyNodeIncident(node: NodeMetrics): ClassificationResult | 
   }
 
   if (node.conditions.memoryPressure || node.conditions.diskPressure) {
+    // Minikube often runs at high memory usage due to VM allocation, skip memory pressure alerts for it
+    if (node.nodeName.includes("minikube") && !node.conditions.diskPressure) {
+      return null;
+    }
+
     return {
       category: "node-pressure",
       severity: "high",
@@ -128,6 +133,11 @@ export function classifyNodeIncident(node: NodeMetrics): ClassificationResult | 
   }
 
   if (node.memoryUsagePercent > 90) {
+    // Minikube often runs at high memory usage due to VM allocation, skip memory pressure alerts for it
+    if (node.nodeName.includes("minikube")) {
+      return null;
+    }
+
     return {
       category: "node-pressure",
       severity: "high",

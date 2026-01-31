@@ -16,7 +16,7 @@ export function NeedleBarGauge({ value, label }: GaugeProps) {
 
   return (
     <div className="flex flex-col items-center">
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <Gauge
         value={displayValue}
       />

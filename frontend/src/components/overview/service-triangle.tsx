@@ -137,7 +137,7 @@ export function ServiceTriangle({
             onMouseLeave={() => setIsHovered(false)}
           >
             <div className="text-center mb-1">
-              <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                 {service.name.replace(/-/g, " ")}
               </span>
             </div>
@@ -210,21 +210,21 @@ export function ServiceTriangle({
         <TooltipContent
           side="right"
           sideOffset={12}
-          className="bg-[#1a1a1a] border border-gray-600 rounded-xl shadow-2xl p-0 overflow-hidden min-w-[200px]"
+          className="bg-popover border border-border rounded-xl shadow-2xl p-0 overflow-hidden min-w-[200px]"
         >
-          <div className="px-4 py-3 border-b border-gray-700 bg-linear-to-r from-[#222] to-[#1a1a1a]">
-            <p className="text-sm font-semibold text-white">
+          <div className="px-4 py-3 border-b border-border bg-muted">
+            <p className="text-sm font-semibold text-foreground">
               {service.name.replace(/-/g, " ")}
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">{service.namespace}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{service.namespace}</p>
           </div>
           <div className="px-4 py-3 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm shadow-green-500/50" />
                 <div>
-                  <span className="text-xs text-gray-400 block">Healthy</span>
-                  <span className="text-sm text-green-400 font-semibold">
+                  <span className="text-xs text-muted-foreground block">Healthy</span>
+                  <span className="text-sm text-success font-semibold">
                     {healthyCnt}
                   </span>
                 </div>
@@ -232,8 +232,8 @@ export function ServiceTriangle({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-sm shadow-yellow-500/50" />
                 <div>
-                  <span className="text-xs text-gray-400 block">Healing</span>
-                  <span className="text-sm text-yellow-400 font-semibold">
+                  <span className="text-xs text-muted-foreground block">Healing</span>
+                  <span className="text-sm text-warning font-semibold">
                     {healingCnt}
                   </span>
                 </div>
@@ -241,7 +241,7 @@ export function ServiceTriangle({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
                 <div>
-                  <span className="text-xs text-gray-400 block">Failed</span>
+                  <span className="text-xs text-muted-foreground block">Failed</span>
                   <span className="text-sm text-red-400 font-semibold">
                     {failedCnt}
                   </span>
@@ -250,24 +250,24 @@ export function ServiceTriangle({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
                 <div>
-                  <span className="text-xs text-gray-400 block">Total</span>
-                  <span className="text-sm text-blue-400 font-semibold">
+                  <span className="text-xs text-muted-foreground block">Total</span>
+                  <span className="text-sm text-primary font-semibold">
                     {service.pods.length}
                   </span>
                 </div>
               </div>
             </div>
-            <div className="h-px bg-gray-700" />
+            <div className="h-px bg-border" />
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">CPU Usage</span>
-                <span className="text-xs text-cyan-400 font-mono font-medium">
+                <span className="text-xs text-muted-foreground">CPU Usage</span>
+                <span className="text-xs text-primary font-mono font-medium">
                   {(service.totalCpu / 1000).toFixed(2)} cores
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">Memory Usage</span>
-                <span className="text-xs text-purple-400 font-mono font-medium">
+                <span className="text-xs text-muted-foreground">Memory Usage</span>
+                <span className="text-xs text-primary font-mono font-medium">
                   {formatBytes(service.totalMemory)}
                 </span>
               </div>

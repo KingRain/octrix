@@ -221,6 +221,48 @@ class IncidentDetector {
         }
       }
 
+      // Enhanced Monitoring: Check for failed Critical Services (specifically streaming-service)
+      // We check this explicitly because they might be marked as 'simulated' and skipped above,
+      // or they might be in a 'Failed' state which doesn't generate metrics.
+      for (const pod of actualPods) {
+        if (!pod.name.includes("streaming-service")) continue;
+
+        if (pod.phase === "Failed" || pod.status === "failed") {
+          const podKey = `${pod.namespace}/${pod.name}`;
+          
+          // Check if incident already exists
+          const existingIncident = Array.from(this.incidents.values()).find(
+            (i) => i.resource === pod.name && 
+                 i.namespace === pod.namespace && 
+                 i.status !== "resolved" &&
+                 i.status !== "acknowledged"
+          );
+
+          if (existingIncident) continue;
+          if (this.isInCooldown(`pod:${podKey}`)) continue;
+
+          this.createIncident({
+            title: `CRITICAL SERVICE FAILED: ${pod.name}`,
+            description: `Streaming service pod has entered Failed state. Production impact detected.`,
+            severity: "high",
+            category: "crash-loop", // Maps to 'pod-crash' trigger in HealingService
+            resource: pod.name,
+            resourceType: "pod",
+            namespace: pod.namespace,
+            autoHealable: true,
+            suggestedAction: "Restart pod immediately",
+            productionBehavior: "Video playback interruptions for users",
+            metrics: { 
+              phase: pod.phase, 
+              restarts: pod.restarts || 0,
+              cpuUsage: 0, 
+              memoryUsage: 0 
+            },
+          });
+          this.setCooldown(`pod:${podKey}`);
+        }
+      }
+
       const multiServiceClassification = classifyMultiServiceFailure(failedServices);
       if (multiServiceClassification && !this.isInCooldown("multi-service")) {
         this.createIncident({
@@ -256,6 +298,9 @@ class IncidentDetector {
     productionBehavior: string;
     metrics: Record<string, number | string | boolean>;
     sloBurnSignals?: Partial<SLOBurnSignals>;
+    sloBurnDriver?: SLOBurnDriver;
+    sloBurnConfidence?: number;
+    sloBurnEvidence?: string;
   }): Incident {
     // Create base incident
     const baseIncident: Incident = {
@@ -278,13 +323,23 @@ class IncidentDetector {
       relatedAlerts: [],
     };
 
-    // Dynamically classify SLO burn driver
-    const sloBurnClassification = enrichIncidentWithSLOBurn(baseIncident, params.sloBurnSignals);
+    // Dynamically classify SLO burn driver OR use overrides
+    let sloBurnDriver = params.sloBurnDriver;
+    let sloBurnEvidence = params.sloBurnEvidence;
+    let sloBurnConfidence = params.sloBurnConfidence;
+
+    if (!sloBurnDriver) {
+      const classification = enrichIncidentWithSLOBurn(baseIncident, params.sloBurnSignals);
+      sloBurnDriver = classification.sloBurnDriver;
+      sloBurnEvidence = classification.evidence;
+      sloBurnConfidence = classification.confidence;
+    }
+
     const incident: Incident = {
       ...baseIncident,
-      sloBurnDriver: sloBurnClassification.sloBurnDriver,
-      sloBurnEvidence: sloBurnClassification.evidence,
-      sloBurnConfidence: sloBurnClassification.confidence,
+      sloBurnDriver: sloBurnDriver as SLOBurnDriver,
+      sloBurnEvidence: sloBurnEvidence as string,
+      sloBurnConfidence: sloBurnConfidence as number,
     };
 
     this.incidents.set(incident.id, incident);
@@ -314,6 +369,9 @@ class IncidentDetector {
     suggestedAction: string;
     productionBehavior: string;
     metrics: Record<string, number | string | boolean>;
+    sloBurnDriver?: SLOBurnDriver;
+    sloBurnConfidence?: number;
+    sloBurnEvidence?: string;
   }): Incident {
     const incident = this.createIncident({
       ...params,

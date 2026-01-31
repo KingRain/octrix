@@ -41,12 +41,12 @@ const healthColors: Record<PodHealth, { fill: string; stroke: string }> = {
 };
 
 const healthLabels: Record<PodHealth, { label: string; color: string }> = {
-  healthy: { label: "Healthy", color: "text-green-400" },
-  healing: { label: "Healing", color: "text-yellow-400" },
-  failed: { label: "Failed", color: "text-red-400" },
-  pending: { label: "Pending", color: "text-blue-400" },
-  unknown: { label: "Unknown", color: "text-gray-400" },
-  disconnected: { label: "Disconnected", color: "text-gray-500" },
+  healthy: { label: "Healthy", color: "text-success" },
+  healing: { label: "Healing", color: "text-warning" },
+  failed: { label: "Failed", color: "text-destructive" },
+  pending: { label: "Pending", color: "text-primary" },
+  unknown: { label: "Unknown", color: "text-muted-foreground" },
+  disconnected: { label: "Disconnected", color: "text-muted-foreground" },
 };
 
 export function TrianglePod({
@@ -115,10 +115,10 @@ export function TrianglePod({
         <TooltipContent
           side="top"
           sideOffset={8}
-          className="bg-[#1a1a1a] border border-gray-600 rounded-lg shadow-2xl p-0 overflow-hidden"
+          className="bg-popover border border-border rounded-lg shadow-2xl p-0 overflow-hidden"
         >
-          <div className="px-3 py-2 border-b border-gray-700 bg-[#222]">
-            <p className="font-semibold text-sm text-white truncate max-w-[200px]">
+          <div className="px-3 py-2 border-b border-border bg-muted">
+            <p className="font-semibold text-sm text-foreground truncate max-w-[200px]">
               {name}
             </p>
             <p className={cn("text-xs font-medium", statusInfo.color)}>
@@ -127,23 +127,23 @@ export function TrianglePod({
           </div>
           <div className="px-3 py-2 space-y-1.5">
             <div className="flex items-center justify-between gap-4 text-xs">
-              <span className="text-gray-400">CPU</span>
-              <span className="text-cyan-400 font-mono font-medium">
+              <span className="text-muted-foreground">CPU</span>
+              <span className="text-primary font-mono font-medium">
                 {cpu.toFixed(1)}m
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 text-xs">
-              <span className="text-gray-400">Memory</span>
-              <span className="text-purple-400 font-mono font-medium">
+              <span className="text-muted-foreground">Memory</span>
+              <span className="text-primary font-mono font-medium">
                 {(memory / 1024 / 1024).toFixed(0)}Mi
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 text-xs">
-              <span className="text-gray-400">Restarts</span>
+              <span className="text-muted-foreground">Restarts</span>
               <span
                 className={cn(
                   "font-mono font-medium",
-                  restarts > 0 ? "text-orange-400" : "text-gray-300",
+                  restarts > 0 ? "text-warning" : "text-muted-foreground",
                 )}
               >
                 {restarts}
@@ -151,7 +151,7 @@ export function TrianglePod({
             </div>
 
             {timeToOomSeconds !== undefined && timeToOomSeconds < 3600 && (
-              <div className="flex items-center justify-between gap-4 text-xs font-medium text-red-400 animate-pulse">
+              <div className="flex items-center justify-between gap-4 text-xs font-medium text-destructive animate-pulse">
                 <span>OOM Risk</span>
                 <span>
                   In {Math.floor(timeToOomSeconds / 60)}m{" "}
@@ -162,9 +162,9 @@ export function TrianglePod({
 
             {pvcs && pvcs.length > 0 && (
               <>
-                <div className="h-px bg-gray-700/50 my-1" />
+                <div className="h-px bg-border/50 my-1" />
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Volumes
                   </p>
                   {pvcs.map((pvc, idx) => (
@@ -172,7 +172,7 @@ export function TrianglePod({
                       key={idx}
                       className="flex items-center justify-between gap-3 text-[10px]"
                     >
-                      <span className="text-gray-400 truncate max-w-[100px]">
+                      <span className="text-muted-foreground truncate max-w-[100px]">
                         {pvc.name}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -195,10 +195,10 @@ export function TrianglePod({
                           className={cn(
                             "font-mono font-medium min-w-[24px] text-right",
                             pvc.health === "critical"
-                              ? "text-red-400"
+                              ? "text-destructive"
                               : pvc.health === "warning"
-                                ? "text-yellow-400"
-                                : "text-green-400",
+                                ? "text-warning"
+                                : "text-success",
                           )}
                         >
                           {Math.round(pvc.usagePercent)}%

@@ -99,33 +99,33 @@ function ActivityCard({ activity, isExpanded, onToggle }: {
   const getStatusColor = () => {
     switch (activity.status) {
       case "success":
-        return "text-green-500";
+        return "text-success";
       case "failed":
-        return "text-red-500";
+        return "text-destructive";
       case "skipped":
-        return "text-yellow-500";
+        return "text-warning";
       default:
-        return "text-blue-500";
+        return "text-primary";
     }
   };
 
   const getBadgeColor = () => {
     switch (activity.actionLabel || activity.ruleName) {
       case "Scale Up":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
+        return "bg-success/20 text-success border-success/30";
       case "Scale Down":
-        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+        return "bg-warning/20 text-warning border-warning/30";
       case "Patch Limits":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+        return "bg-primary/20 text-primary border-primary/30";
       case "Restart Pod":
-        return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+        return "bg-destructive/20 text-destructive border-destructive/30";
       default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+        return "bg-muted/20 text-muted-foreground border-muted/30";
     }
   };
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-[#141414] p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className={cn("p-2 rounded-lg border", getBadgeColor())}>
@@ -136,15 +136,15 @@ function ActivityCard({ activity, isExpanded, onToggle }: {
               <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium border", getBadgeColor())}>
                 {activity.actionLabel || activity.ruleName}
               </span>
-              <span className="text-sm text-gray-400">
-                Triggered by <span className="text-white font-medium">{activity.trigger}</span>
+              <span className="text-sm text-muted-foreground">
+                Triggered by <span className="text-foreground font-medium">{activity.trigger}</span>
               </span>
             </div>
           </div>
         </div>
         <button 
           onClick={onToggle}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {formatRelativeTime(activity.timestamp)}
           <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
@@ -153,18 +153,18 @@ function ActivityCard({ activity, isExpanded, onToggle }: {
 
       <div className="space-y-2 text-sm">
         {activity.fromReplicas !== undefined && activity.toReplicas !== undefined && (
-          <div className="flex items-center gap-2 text-gray-400">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <ArrowUpRight className="h-4 w-4" />
             <span>
               Scaled {activity.actionLabel === "Scale Down" ? "down" : "up"} replicas from{" "}
-              <span className="text-white font-medium">{activity.fromReplicas}</span> to{" "}
-              <span className="text-white font-medium">{activity.toReplicas}</span>
+              <span className="text-foreground font-medium">{activity.fromReplicas}</span> to{" "}
+              <span className="text-foreground font-medium">{activity.toReplicas}</span>
             </span>
           </div>
         )}
         
         {activity.details && !activity.fromReplicas && (
-          <div className="flex items-center gap-2 text-gray-400">
+          <div className="flex items-center gap-2 text-muted-foreground">
             {activity.actionLabel === "Patch Limits" ? (
               <MemoryStick className="h-4 w-4" />
             ) : activity.actionLabel === "Restart Pod" ? (
@@ -178,7 +178,7 @@ function ActivityCard({ activity, isExpanded, onToggle }: {
                 : activity.actionLabel === "Patch Limits"
                 ? `Increased memory limit to `
                 : ""}
-              <span className="text-white font-medium">
+              <span className="text-foreground font-medium">
                 {activity.actionLabel === "Restart Pod" 
                   ? activity.targetResource
                   : activity.actionLabel === "Patch Limits"
@@ -189,7 +189,7 @@ function ActivityCard({ activity, isExpanded, onToggle }: {
           </div>
         )}
         
-        <div className="flex items-center gap-2 text-gray-400">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Zap className="h-4 w-4" />
           <span>
             Outcome: <span className={cn("font-medium", getStatusColor())}>
@@ -310,15 +310,15 @@ export default function HealingPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-[#0d0d0d] min-h-screen">
+    <div className="space-y-6 p-6 bg-background min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Auto-Healing</h1>
-          <p className="text-sm text-gray-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Auto-Healing</h1>
+          <p className="text-sm text-muted-foreground">
             Automated remediation actions and system recovery logs.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Status: All</span>
           <Filter className="h-4 w-4" />
         </div>
@@ -332,8 +332,8 @@ export default function HealingPage() {
             className={cn(
               "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
               activeFilter === filter.key
-                ? "bg-blue-600 text-white"
-                : "bg-[#1a1a1a] text-gray-400 hover:bg-[#252525] hover:text-white"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
             )}
           >
             {filter.label}
@@ -343,7 +343,7 @@ export default function HealingPage() {
       </div>
 
       <div>
-        <h2 className="text-lg font-medium text-white mb-4">Auto-Healing Activity</h2>
+        <h2 className="text-lg font-medium text-foreground mb-4">Auto-Healing Activity</h2>
         <div className="space-y-3">
           {activity.length > 0 ? (
             activity.map((item) => (
@@ -355,7 +355,7 @@ export default function HealingPage() {
               />
             ))
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No healing activity found</p>
               <p className="text-xs mt-1">Activity will appear when auto-healing actions are triggered</p>
@@ -364,36 +364,36 @@ export default function HealingPage() {
         </div>
       </div>
 
-      <div className="pt-6 border-t border-gray-800">
-        <h2 className="text-lg font-medium text-white mb-4">MTTR Reduction</h2>
+      <div className="pt-6 border-t border-border">
+        <h2 className="text-lg font-medium text-foreground mb-4">MTTR Reduction</h2>
         <div className="grid grid-cols-2 gap-6">
-          <div className="bg-[#141414] rounded-xl border border-gray-800 p-6">
-            <p className="text-sm text-gray-400 mb-2">Avg Recovery Time</p>
+          <div className="bg-card rounded-xl border border-border p-6">
+            <p className="text-sm text-muted-foreground mb-2">Avg Recovery Time</p>
             <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold text-white">{avgTime.value}</span>
-              <span className="text-2xl text-gray-400">{avgTime.unit}</span>
+              <span className="text-4xl font-bold text-foreground">{avgTime.value}</span>
+              <span className="text-2xl text-muted-foreground">{avgTime.unit}</span>
             </div>
-            <div className="flex items-center gap-1 mt-2 text-green-500 text-sm">
+            <div className="flex items-center gap-1 mt-2 text-success text-sm">
               <TrendingDown className="h-4 w-4" />
               <span>{improvementPercent}% improvement</span>
             </div>
           </div>
 
-          <div className="bg-[#141414] rounded-xl border border-gray-800 p-6">
-            <p className="text-sm text-gray-400 mb-4">Impact Analysis</p>
+          <div className="bg-card rounded-xl border border-border p-6">
+            <p className="text-sm text-muted-foreground mb-4">Impact Analysis</p>
             <div className="flex items-center gap-4">
               <div className="text-center">
-                <p className="text-xs text-gray-500 mb-1">Before AI</p>
-                <p className="text-2xl font-bold text-gray-400">{beforeAIMinutes} min</p>
+                <p className="text-xs text-muted-foreground mb-1">Before AI</p>
+                <p className="text-2xl font-bold text-muted-foreground">{beforeAIMinutes} min</p>
               </div>
               
-              <ChevronsRight className="h-6 w-6 text-gray-600" />
+              <ChevronsRight className="h-6 w-6 text-muted-foreground" />
               
-              <div className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg p-4">
+              <div className="flex-1 bg-gradient-to-r from-primary to-cyan-500 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-blue-200">With Auto-Heal</p>
-                    <p className="text-2xl font-bold text-white">{withAutoHealMinutes} min</p>
+                    <p className="text-xs text-primary-foreground">With Auto-Heal</p>
+                    <p className="text-2xl font-bold text-foreground">{withAutoHealMinutes} min</p>
                   </div>
                   <span className="px-2 py-1 bg-cyan-400/20 text-cyan-300 text-xs rounded-full">
                     New Standard

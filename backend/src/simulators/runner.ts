@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from "uuid";
 import { createChildLogger } from "../utils/logger.js";
 import { scenarioManager, type SimulationScenario, type SimulationRun, type SimulationMetric } from "./scenarios.js";
 import { incidentDetector } from "../incidents/detector.js";
+import { geminiClassifier } from "../services/gemini-classifier.service.js";
+import { customPodSimulator } from "./custom-pod-simulator.js";
 
 const logger = createChildLogger("simulation-runner");
 
@@ -34,7 +36,8 @@ class SimulationRunner {
     scenarioId: string,
     targetNamespace: string,
     targetResource?: string,
-    customDuration?: number
+    customDuration?: number,
+    customParameters?: Record<string, unknown>
   ): Promise<SimulationRun> {
     const scenario = scenarioManager.getScenario(scenarioId);
     if (!scenario) {
@@ -63,7 +66,10 @@ class SimulationRunner {
 
       const activeSimulation: ActiveSimulation = {
         run,
-        scenario,
+        scenario: {
+          ...scenario,
+          parameters: { ...scenario.parameters, ...customParameters },
+        },
       };
 
       await this.executeScenario(activeSimulation);
@@ -105,6 +111,16 @@ class SimulationRunner {
         await active.cleanupFn();
       } catch (error) {
         logger.error({ error, runId }, "Cleanup failed");
+      }
+    } else {
+      // Default cleanup: Remove any affected resources that were mocked
+      for (const resource of active.run.affectedResources) {
+        if (resource.includes("/")) {
+          const [ns, name] = resource.split("/");
+          await import("../services/kubernetes.service.js").then(({ kubernetesService }) => {
+             kubernetesService.removeMockPod(ns, name);
+          });
+        }
       }
     }
 
@@ -181,6 +197,21 @@ class SimulationRunner {
         break;
       case "multi-service-failure":
         await this.simulateMultiServiceFailure(simulation);
+        break;
+      case "pod-running-app-broken":
+        await this.simulatePodRunningAppBroken(simulation);
+        break;
+      case "readiness-lies":
+        await this.simulateReadinessLies(simulation);
+        break;
+      case "config-drift":
+        await this.simulateConfigDrift(simulation);
+        break;
+      case "network-blackhole":
+        await this.simulateNetworkBlackhole(simulation);
+        break;
+      case "custom-oom":
+        await this.simulateCustomOOM(simulation);
         break;
       default:
         throw new Error(`Unknown scenario type: ${scenario.type}`);
@@ -573,6 +604,380 @@ class SimulationRunner {
 
     run.incidentId = incident.id;
     logger.error({ targetServices, incidentId: incident.id }, "Multi-service failure simulation injected - CRITICAL ESCALATION");
+  }
+
+  private async simulatePodRunningAppBroken(simulation: ActiveSimulation) {
+    const { scenario, run } = simulation;
+    const prefix = run.targetResource || "api-gateway";
+    const resourceName = `${prefix}-${uuidv4().slice(0, 8)}`;
+    const latency = (scenario.parameters.latencyMs as number) || 5000;
+    
+    run.affectedResources.push(`${run.targetNamespace}/${resourceName}`);
+    run.metrics.push({
+      name: "Request Latency",
+      before: 45,
+      during: latency,
+      after: 45,
+      unit: "ms",
+    });
+    run.metrics.push({
+      name: "Pod Status",
+      before: 1,
+      during: 1, // Still Running
+      after: 1,
+      unit: "boolean",
+    });
+
+    // Prepare data for Gemini analysis
+    const simulatedLogs = `
+[INFO] Pod status: Running
+[INFO] Liveness probe: Success
+[WARN] Request ID 1024 took ${latency}ms (Threshold: 500ms)
+[WARN] Request ID 1025 took ${latency + 23}ms (Threshold: 500ms)
+[ERROR] Upstream timeout after ${latency}ms
+    `.trim();
+
+    const metricsData = { 
+      latencyMs: latency, 
+      podStatus: "Running", 
+      restartCount: 0,
+      cpuThrottling: true 
+    };
+
+    // Analyze with Gemini
+    const analysis = await geminiClassifier.analyzeSLOBurn(
+      "pod-running-app-broken",
+      simulatedLogs,
+      metricsData
+    );
+
+    const incident = incidentDetector.injectSimulatedIncident({
+      title: `Silent Failure: High Latency (${resourceName})`,
+      description: "App responding slowly but Pod status is Running. No restarts detected.",
+      severity: scenario.severity,
+      category: scenario.incidentCategory,
+      resource: resourceName,
+      resourceType: "pod",
+      namespace: run.targetNamespace,
+      autoHealable: scenario.autoHealable,
+      suggestedAction: "Check app logs & tracing, adjust CPU limits",
+      productionBehavior: scenario.productionBehavior,
+      metrics: metricsData,
+      sloBurnDriver: analysis.driver,
+      sloBurnConfidence: analysis.confidence,
+      sloBurnEvidence: analysis.evidence,
+    });
+
+    run.incidentId = incident.id;
+    logger.warn({ resourceName, incidentId: incident.id }, "Pod running but app broken simulation injected");
+  }
+
+  private async simulateReadinessLies(simulation: ActiveSimulation) {
+    const { scenario, run } = simulation;
+    const prefix = run.targetResource || "checkout-service";
+    const resourceName = `${prefix}-${uuidv4().slice(0, 8)}`;
+    
+    run.affectedResources.push(`${run.targetNamespace}/${resourceName}`);
+    run.metrics.push({
+      name: "HTTP 500 Rate",
+      before: 0,
+      during: 100,
+      after: 0,
+      unit: "percent",
+    });
+    run.metrics.push({
+      name: "Readiness Probe",
+      before: 200,
+      during: 200, // Lying
+      after: 200,
+      unit: "status_code",
+    });
+
+    // Prepare data for Gemini analysis
+    const simulatedLogs = `
+[INFO] Components initialized
+[INFO] Readiness check: GET /health -> 200 OK
+[ERROR] DatabaseConnectionError: Connection refused to postgres:5432
+[ERROR] Failed to process checkout: DB unavailable
+[INFO] Readiness check: GET /health -> 200 OK (Checks: shallow)
+    `.trim();
+
+    const metricsData = { 
+      readinessStatus: 200, 
+      httpErrorRate: 100, 
+      dependencyStatus: "down" 
+    };
+
+    // Analyze with Gemini
+    const analysis = await geminiClassifier.analyzeSLOBurn(
+      "readiness-lies",
+      simulatedLogs,
+      metricsData
+    );
+
+    const incident = incidentDetector.injectSimulatedIncident({
+      title: `Silent Failure: Deep Health Check Failed (${resourceName})`,
+      description: "Readiness probe returning 200 OK while critical dependencies are down.",
+      severity: scenario.severity,
+      category: scenario.incidentCategory,
+      resource: resourceName,
+      resourceType: "pod",
+      namespace: run.targetNamespace,
+      autoHealable: scenario.autoHealable,
+      suggestedAction: "Update readiness probe to check dependencies",
+      productionBehavior: scenario.productionBehavior,
+      metrics: metricsData,
+      sloBurnDriver: analysis.driver,
+      sloBurnConfidence: analysis.confidence,
+      sloBurnEvidence: analysis.evidence,
+    });
+
+    run.incidentId = incident.id;
+    logger.warn({ resourceName, incidentId: incident.id }, "Readiness lies simulation injected");
+  }
+
+  private async simulateConfigDrift(simulation: ActiveSimulation) {
+    const { scenario, run } = simulation;
+    const prefix = run.targetResource || "feature-service";
+    const resourceName = `${prefix}-${uuidv4().slice(0, 8)}`;
+    
+    run.affectedResources.push(`${run.targetNamespace}/${resourceName}`);
+    run.metrics.push({
+      name: "Config Version Match",
+      before: 1,
+      during: 0,
+      after: 1,
+      unit: "boolean",
+    });
+
+    // Prepare data for Gemini analysis
+    const simulatedLogs = `
+[INFO] App started with CONFIG_HASH=sha123
+[INFO] Kubernetes ConfigMap updated to CONFIG_HASH=sha999
+[WARN] Config file timestamp: 7 days ago
+[WARN] Feature flag 'new-checkout' is DISABLED (Expected: ENABLED)
+[WARN] Runtime config mismatch detected. Restart required.
+    `.trim();
+
+    const metricsData = { 
+      configVersionMismatch: true, 
+      activeVersion: "v14", 
+      targetVersion: "v15",
+      lastRestart: "7d ago"
+    };
+
+    // Analyze with Gemini
+    const analysis = await geminiClassifier.analyzeSLOBurn(
+      "config-drift",
+      simulatedLogs,
+      metricsData
+    );
+
+    const incident = incidentDetector.injectSimulatedIncident({
+      title: `Silent Failure: Config Drift (${resourceName})`,
+      description: "Application behavior mismatch. Pods using old config version.",
+      severity: scenario.severity,
+      category: scenario.incidentCategory,
+      resource: resourceName,
+      resourceType: "deployment",
+      namespace: run.targetNamespace,
+      autoHealable: scenario.autoHealable,
+      suggestedAction: "Trigger rolling restart to apply new config",
+      productionBehavior: scenario.productionBehavior,
+      metrics: metricsData,
+      sloBurnDriver: analysis.driver,
+      sloBurnConfidence: analysis.confidence,
+      sloBurnEvidence: analysis.evidence,
+    });
+
+    run.incidentId = incident.id;
+    logger.warn({ resourceName, incidentId: incident.id }, "Config drift simulation injected");
+  }
+
+  private async simulateNetworkBlackhole(simulation: ActiveSimulation) {
+    const { scenario, run } = simulation;
+    const prefix = run.targetResource || "payment-processor";
+    const resourceName = `${prefix}-${uuidv4().slice(0, 8)}`;
+    
+    run.affectedResources.push(`${run.targetNamespace}/${resourceName}`);
+    run.metrics.push({
+      name: "Egress Dropped",
+      before: 0,
+      during: 100,
+      after: 0,
+      unit: "percent",
+    });
+    run.metrics.push({
+      name: "Pod Status",
+      before: 1,
+      during: 1, // Still Running
+      after: 1,
+      unit: "boolean",
+    });
+
+    // Prepare data for Gemini analysis
+    const simulatedLogs = `
+[INFO] Pod status: Running
+[ERROR] DNS lookup failed for 'api.stripe.com': Timeout
+[ERROR] Connect ECONNREFUSED 10.0.3.4:443
+[ERROR] Failed to reach external payment gateway
+[INFO] Local health check passed (Internal only)
+    `.trim();
+
+    const metricsData = { 
+      egressDropRate: 100, 
+      dnsResolution: "failed", 
+      podStatus: "Running" 
+    };
+
+    // Analyze with Gemini
+    const analysis = await geminiClassifier.analyzeSLOBurn(
+      "network-blackhole",
+      simulatedLogs,
+      metricsData
+    );
+
+    const incident = incidentDetector.injectSimulatedIncident({
+      title: `Silent Failure: Network Zombie (${resourceName})`,
+      description: "Pod is Running but cannot reach dependencies (Network/DNS Blackhole).",
+      severity: scenario.severity,
+      category: scenario.incidentCategory,
+      resource: resourceName,
+      resourceType: "pod",
+      namespace: run.targetNamespace,
+      autoHealable: scenario.autoHealable,
+      suggestedAction: "Check NetworkPolicy and DNS config",
+      productionBehavior: scenario.productionBehavior,
+      metrics: metricsData,
+      sloBurnDriver: analysis.driver,
+      sloBurnConfidence: analysis.confidence,
+      sloBurnEvidence: analysis.evidence,
+    });
+
+    run.incidentId = incident.id;
+    run.incidentId = incident.id;
+    logger.error({ resourceName, incidentId: incident.id }, "Network blackhole simulation injected");
+  }
+
+  private async simulateCustomOOM(simulation: ActiveSimulation) {
+    const { scenario, run } = simulation;
+    const { kubernetesService } = await import("../services/kubernetes.service.js");
+
+    const memoryLimitMi = Number(scenario.parameters.memoryLimitMi) || 128;
+    const simulateActivity = Boolean(
+      scenario.parameters.simulateActivity ?? scenario.parameters.highActivity,
+    );
+
+    const limitBytes = memoryLimitMi * 1024 * 1024;
+    const baseUsageBytes = simulateActivity
+      ? Math.floor(limitBytes * 0.65)
+      : Math.floor(limitBytes * 0.35);
+    const growthRateBytesPerSecond = simulateActivity
+      ? Math.max(1, Math.floor(limitBytes / 240)) // ~4 minutes to OOM
+      : Math.floor(limitBytes / 2400); // slow burn by default
+
+    const prefix =
+      (scenario.parameters.clusterName as string) || run.targetResource || "custom-oom-app";
+    const resourceName = `${prefix}-${uuidv4().slice(0, 5)}`;
+
+    run.targetResource = resourceName;
+    run.affectedResources.push(`${run.targetNamespace}/${resourceName}`);
+
+    const labels = {
+      app: prefix,
+      "app.kubernetes.io/name": prefix,
+      env: "simulation",
+    };
+
+    logger.info({ resourceName, limitBytes, baseUsageBytes }, "Spawning custom OOM pod");
+
+    try {
+      await kubernetesService.createPod(
+        run.targetNamespace,
+        resourceName,
+        labels,
+        "nginx:latest-alpine",
+        100,
+        baseUsageBytes,
+      );
+    } catch (error) {
+      logger.warn({ error, resourceName }, "Failed to create pod via API, using mock store");
+      kubernetesService.addMockPod({
+        id: `${run.targetNamespace}/${resourceName}`,
+        name: resourceName,
+        namespace: run.targetNamespace,
+        status: "running",
+        phase: "Running",
+        nodeName: "octrix-sim-node",
+        containers: [
+          {
+            name: "main",
+            image: "nginx:latest-alpine",
+            status: "running",
+            ready: true,
+            restartCount: 0,
+            cpuUsage: 100,
+            memoryUsage: baseUsageBytes,
+            ports: [],
+          },
+        ],
+        restarts: 0,
+        cpuUsage: 100,
+        memoryUsage: baseUsageBytes,
+        createdAt: new Date().toISOString(),
+        labels,
+        annotations: {},
+        ownerReferences: [],
+        ip: `10.244.${Math.floor(Math.random() * 10)}.${Math.floor(Math.random() * 255)}`,
+        volumes: [],
+      });
+    }
+
+    customPodSimulator.registerPod({
+      namespace: run.targetNamespace,
+      name: resourceName,
+      limitBytes,
+      baseUsageBytes,
+      growthRateBytesPerSecond,
+    });
+
+    run.metrics.push({
+      name: "Memory Usage",
+      before: Math.floor(baseUsageBytes / 1024 / 1024),
+      during: Math.floor(limitBytes / 1024 / 1024),
+      after: Math.floor(baseUsageBytes / 1024 / 1024),
+      unit: "Mi",
+    });
+
+    if (simulateActivity) {
+      const incident = incidentDetector.injectSimulatedIncident({
+        title: `Custom OOM: ${resourceName}`,
+        description: `Pod exceeded memory limit of ${memoryLimitMi}Mi`,
+        severity: "low",
+        category: "oom-killed",
+        resource: resourceName,
+        resourceType: "pod",
+        namespace: run.targetNamespace,
+        autoHealable: true,
+        suggestedAction: "Patch memory limit & restart",
+        productionBehavior: "Pod memory is spiking due to simulated activity",
+        metrics: {
+          memoryLimitMi,
+          memoryUsedMi: Math.floor(limitBytes / 1024 / 1024),
+          oomKilled: true,
+        },
+      });
+      run.incidentId = incident.id;
+    }
+
+    simulation.cleanupFn = async () => {
+      customPodSimulator.removePod(run.targetNamespace, resourceName);
+      try {
+        await kubernetesService.deletePod(run.targetNamespace, resourceName);
+      } catch (error) {
+        logger.warn({ error, resourceName }, "Failed to delete custom OOM pod");
+      }
+    };
   }
 
   getStats() {

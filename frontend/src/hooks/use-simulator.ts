@@ -60,7 +60,7 @@ interface UseSimulatorReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  startSimulation: (scenarioId: string, targetNamespace: string, targetResource?: string, duration?: number) => Promise<SimulationRun | null>;
+  startSimulation: (scenarioId: string, targetNamespace: string, targetResource?: string, duration?: number, parameters?: Record<string, unknown>) => Promise<SimulationRun | null>;
   stopSimulation: (runId: string) => Promise<boolean>;
   cancelSimulation: (runId: string) => Promise<boolean>;
 }
@@ -88,19 +88,32 @@ export function useSimulator(): UseSimulatorReturn {
 
       clearTimeout(timeoutId);
 
-      if (!scenariosRes.ok) {
-        throw new Error("Failed to fetch scenarios");
-      }
+      const parseResponse = async (res: Response, name: string) => {
+        if (!res.ok) {
+           console.warn(`Failed to fetch ${name}: ${res.status} ${res.statusText}`);
+           return { success: false };
+        }
+        try {
+          return await res.json();
+        } catch (e) {
+          console.error(`Failed to parse ${name} JSON:`, e);
+          return { success: false };
+        }
+      };
 
-      const scenariosData = await scenariosRes.json();
-      const runsData = await runsRes.json();
-      const activeData = await activeRes.json();
-      const statsData = await statsRes.json();
+      const scenariosData = await parseResponse(scenariosRes, "scenarios");
+      const runsData = await parseResponse(runsRes, "runs");
+      const activeData = await parseResponse(activeRes, "activeRuns");
+      const statsData = await parseResponse(statsRes, "stats");
 
       if (mountedRef.current) {
         if (scenariosData.success) setScenarios(scenariosData.data);
         if (runsData.success) setRuns(runsData.data);
-        if (activeData.success) setActiveRuns(activeData.data);
+        if (activeData.success) {
+           // Filter out any non-active runs just in case, though backend should handle this
+           const active = (activeData.data as SimulationRun[]) || [];
+           setActiveRuns(active.filter(r => r.status === 'running' || r.status === 'pending'));
+        }
         if (statsData.success) setStats(statsData.data);
         setError(null);
       }
@@ -122,7 +135,8 @@ export function useSimulator(): UseSimulatorReturn {
     scenarioId: string,
     targetNamespace: string,
     targetResource?: string,
-    duration?: number
+    duration?: number,
+    parameters?: Record<string, unknown>
   ): Promise<SimulationRun | null> => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/v1/simulator/scenarios/${scenarioId}/start`, {
@@ -132,6 +146,7 @@ export function useSimulator(): UseSimulatorReturn {
           targetNamespace,
           targetResource,
           duration,
+          parameters,
         }),
       });
 

@@ -123,7 +123,7 @@ export default function OverviewPage() {
   const showLoading = isLoading && !hasReceivedDataRef.current;
 
   return (
-    <div className="space-y-6 min-h-screen bg-[#0d0d0d] p-6">
+    <div className="space-y-6 min-h-screen bg-gray-100 p-6">
       <OOMAlertPopup 
         alerts={oomWarnings} 
         onDismiss={(podName) => {
@@ -131,10 +131,10 @@ export default function OverviewPage() {
         }}
       />
       
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-gray-200 p-4 rounded-lg">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Overview</h1>
-          <p className="text-sm text-gray-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Overview</h1>
+          <p className="text-sm text-gray-600">
             OTT Streaming Platform - Real-time pod status visualization
           </p>
         </div>
@@ -153,15 +153,15 @@ export default function OverviewPage() {
           <div className="flex items-center gap-6 text-xs">
             <div className="flex items-center gap-2">
               <Heart className="h-4 w-4 text-green-500" />
-              <span className="text-gray-300">{displayStats.healthyPods} Healthy</span>
+              <span className="text-gray-900">{displayStats.healthyPods} Healthy</span>
             </div>
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-yellow-500" />
-              <span className="text-gray-300">{displayStats.healingPods} Healing</span>
+              <span className="text-gray-900">{displayStats.healingPods} Healing</span>
             </div>
             <div className="flex items-center gap-2">
               <XCircle className="h-4 w-4 text-red-500" />
-              <span className="text-gray-300">{displayStats.failedPods} Failed</span>
+              <span className="text-gray-900">{displayStats.failedPods} Failed</span>
             </div>
           </div>
           <div className="h-6 w-px bg-gray-700" />
@@ -173,7 +173,7 @@ export default function OverviewPage() {
           ) : (
             <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-yellow-500"}`} />
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-gray-900">
                 {isConnected ? "Live" : "Reconnecting..."}
               </span>
             </div>
@@ -181,10 +181,10 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      <div className="bg-[#141414] rounded-xl border border-gray-800 p-6">
+      <div className="bg-white rounded-xl border border-green-400 p-6">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="h-4 w-4 text-blue-400" />
-          <h2 className="text-sm font-medium text-gray-300">Service Pod Status</h2>
+          <h2 className="text-sm font-medium text-gray-900">Service Pod Status</h2>
           <span className="text-xs text-gray-500 ml-2">
             {displayServices.slice(0, 6).length} service groups
           </span>
@@ -219,10 +219,10 @@ export default function OverviewPage() {
       </div>
 
       {nodeMetrics.length > 0 && (
-        <div className="bg-[#141414] rounded-xl border border-gray-800 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
             <Server className="h-4 w-4 text-purple-400" />
-            <h2 className="text-sm font-medium text-gray-300">Node Resources</h2>
+            <h2 className="text-sm font-medium text-gray-900">Node Resources</h2>
             <span className="text-xs text-gray-500 ml-2">
               {nodeMetrics.length} node{nodeMetrics.length !== 1 ? 's' : ''}
             </span>

@@ -15,7 +15,7 @@ metadata:
     app: streaming-service
     tier: frontend
 spec:
-  replicas: 8
+  replicas: 1
   selector:
     matchLabels:
       app: streaming-service

@@ -85,8 +85,28 @@ export default function NodesPage() {
         fetch(`${BACKEND_URL}/api/v1/overview`),
       ]);
 
-      const nodesData = await nodesRes.json();
-      const overviewData = await overviewRes.json();
+      // Check if responses are OK before parsing JSON to avoid parsing error messages
+      if (!nodesRes.ok) {
+        console.error(
+          `Nodes API error: ${nodesRes.status} ${nodesRes.statusText}`,
+        );
+        return;
+      }
+      if (!overviewRes.ok) {
+        console.error(
+          `Overview API error: ${overviewRes.status} ${overviewRes.statusText}`,
+        );
+        return;
+      }
+
+      let nodesData, overviewData;
+      try {
+        nodesData = await nodesRes.json();
+        overviewData = await overviewRes.json();
+      } catch (parseError) {
+        console.error("Failed to parse JSON response:", parseError);
+        return;
+      }
 
       if (nodesData.success && nodesData.data) {
         setNodes(nodesData.data);
@@ -149,7 +169,7 @@ export default function NodesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gray-100 min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Nodes</h1>
@@ -183,39 +203,39 @@ export default function NodesPage() {
         </div>
       </div>
 
-      <div className="bg-[#0d1117] rounded-lg border border-gray-800 overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-800 text-left">
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <tr className="border-b border-gray-200 text-left">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   State
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Roles
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Version
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   External/Internal IP
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   OS
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-32">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider w-32">
                   CPU
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-32">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider w-32">
                   RAM
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Pods
                 </th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Age
                 </th>
               </tr>
@@ -225,17 +245,17 @@ export default function NodesPage() {
                 <tr
                   key={node.nodeName}
                   className={cn(
-                    "border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors",
-                    idx % 2 === 0 ? "bg-[#0d1117]" : "bg-[#161b22]",
+                    "border-b border-gray-100 hover:bg-gray-50 transition-colors",
+                    idx % 2 === 0 ? "bg-white" : "bg-gray-50",
                   )}
                 >
                   <td className="px-4 py-3">
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30">
+                    <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200">
                       Active
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-cyan-400 font-mono text-sm hover:underline cursor-pointer">
+                    <span className="text-blue-600 font-mono text-sm hover:underline cursor-pointer">
                       {node.nodeName}
                     </span>
                   </td>
@@ -295,33 +315,33 @@ export default function NodesPage() {
           </div>
         </div>
 
-        <div className="bg-[#0d1117] rounded-lg border border-gray-800 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-800 text-left">
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <tr className="border-b border-gray-200 text-left">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Namespace
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Node
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     CPU
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Memory
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Storage
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Restarts
                   </th>
                 </tr>
@@ -330,12 +350,12 @@ export default function NodesPage() {
                 {pods.map((pod) => (
                   <tr
                     key={pod.id}
-                    className="border-b border-gray-800/30 hover:bg-gray-800/20"
+                    className="border-b border-gray-100 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 text-sm font-mono text-cyan-400">
+                    <td className="px-4 py-3 text-sm font-mono text-blue-600">
                       {pod.name}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-600">
                       {pod.namespace}
                     </td>
                     <td className="px-4 py-3">
@@ -344,19 +364,19 @@ export default function NodesPage() {
                           "text-xs",
                           (pod.status === "healthy" ||
                             pod.status === "running") &&
-                            "bg-green-500/20 text-green-400",
+                            "bg-green-100 text-green-700",
                           pod.status === "healing" &&
-                            "bg-yellow-500/20 text-yellow-400",
+                            "bg-yellow-100 text-yellow-700",
                           pod.status === "failed" &&
-                            "bg-red-500/20 text-red-400",
+                            "bg-red-100 text-red-700",
                           pod.status === "pending" &&
-                            "bg-blue-500/20 text-blue-400",
+                            "bg-blue-100 text-blue-700",
                         )}
                       >
                         {pod.status || "unknown"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-600">
                       {pod.nodeName || "unknown"}
                     </td>
                     <td className="px-4 py-3">
@@ -430,11 +450,11 @@ export default function NodesPage() {
                             className={cn(
                               "text-[10px] px-1.5 py-0 min-h-0 h-5 border",
                               pod.pvcHealth === "healthy" &&
-                                "bg-green-500/10 text-green-400 border-green-500/30",
+                                "bg-green-100 text-green-700 border-green-200",
                               pod.pvcHealth === "warning" &&
-                                "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+                                "bg-yellow-100 text-yellow-700 border-yellow-200",
                               pod.pvcHealth === "critical" &&
-                                "bg-red-500/10 text-red-400 border-red-500/30",
+                                "bg-red-100 text-red-700 border-red-200",
                             )}
                           >
                             {pod.pvcs?.[0]?.usagePercent.toFixed(0)}% Used
@@ -458,7 +478,7 @@ export default function NodesPage() {
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-4 py-8 text-center text-sm text-gray-500"
+                      className="px-4 py-8 text-center text-sm text-gray-600"
                     >
                       No pods found
                     </td>

@@ -1,5 +1,6 @@
 import { createChildLogger } from "../utils/logger.js";
 import { config } from "../config/index.js";
+import { customPodSimulator } from "../simulators/custom-pod-simulator.js";
 
 const logger = createChildLogger("prometheus-service");
 
@@ -270,9 +271,10 @@ export class PrometheusService {
 
   async getPodMetrics(namespace?: string): Promise<PodMetrics[]> {
     const connected = await this.checkConnection();
+    const simulatedPodMetrics = customPodSimulator.getMetrics();
     
     if (!connected) {
-      return this.getMockPodMetrics();
+      return [...this.getMockPodMetrics(), ...simulatedPodMetrics];
     }
 
     try {
@@ -359,7 +361,7 @@ export class PrometheusService {
         }
       });
 
-      return Array.from(podMap.values()).map((p) => ({
+      const metricsFromPrometheus = Array.from(podMap.values()).map((p) => ({
         podName: p.podName || "unknown",
         namespace: p.namespace || "default",
         nodeName: p.nodeName || "unknown",
@@ -374,9 +376,11 @@ export class PrometheusService {
         timeToOomSeconds: p.timeToOomSeconds,
         memoryGrowthRateBytesPerSecond: p.memoryGrowthRateBytesPerSecond,
       }));
+
+      return [...metricsFromPrometheus, ...simulatedPodMetrics];
     } catch (error) {
       logger.error({ error }, "Failed to get pod metrics from Prometheus");
-      return [];
+      return simulatedPodMetrics;
     }
   }
 

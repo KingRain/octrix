@@ -43,12 +43,12 @@ export function StatsPanel({
   const cpuTotalCores = cpuTotal / 1000;
 
   return (
-    <div className="bg-[#1e1e1e] rounded-lg border border-gray-800">
-      <div className="px-4 py-2 border-b border-gray-800">
-        <p className="text-sm text-gray-400">~ Overview</p>
+    <div className="bg-card rounded-lg border border-border">
+      <div className="px-4 py-2 border-b border-border">
+        <p className="text-sm text-muted-foreground">~ Overview</p>
       </div>
       
-      <div className="grid grid-cols-3 divide-x divide-gray-800">
+      <div className="grid grid-cols-3 divide-x divide-border">
         <div className="p-6">
           <UsageGauge
             label="CPU Usage"
@@ -68,35 +68,35 @@ export function StatsPanel({
         </div>
         
         <div className="p-6 flex flex-col items-center justify-center">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Pods on node</p>
-          <span className="text-6xl font-bold text-blue-400">{podCount}</span>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Pods on node</p>
+          <span className="text-6xl font-bold text-primary">{podCount}</span>
         </div>
       </div>
       
-      <div className="grid grid-cols-5 divide-x divide-gray-800 border-t border-gray-800">
+      <div className="grid grid-cols-5 divide-x divide-border border-t border-border">
         <div className="p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">CPU Used</p>
-          <p className="text-2xl font-bold text-white">{cpuUsedCores.toFixed(3)}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">CPU Used</p>
+          <p className="text-2xl font-bold text-foreground">{cpuUsedCores.toFixed(3)}</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">CPU Total</p>
-          <p className="text-2xl font-bold text-white">{cpuTotalCores}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">CPU Total</p>
+          <p className="text-2xl font-bold text-foreground">{cpuTotalCores}</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">RAM Used</p>
-          <p className="text-2xl font-bold text-white">
-            {memUsedFormatted.value.toFixed(1)} <span className="text-sm text-gray-400">{memUsedFormatted.unit}</span>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">RAM Used</p>
+          <p className="text-2xl font-bold text-foreground">
+            {memUsedFormatted.value.toFixed(1)} <span className="text-sm text-muted-foreground">{memUsedFormatted.unit}</span>
           </p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">RAM Total</p>
-          <p className="text-2xl font-bold text-white">
-            {memTotalFormatted.value.toFixed(1)} <span className="text-sm text-gray-400">{memTotalFormatted.unit}</span>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">RAM Total</p>
+          <p className="text-2xl font-bold text-foreground">
+            {memTotalFormatted.value.toFixed(1)} <span className="text-sm text-muted-foreground">{memTotalFormatted.unit}</span>
           </p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">uptime</p>
-          <p className="text-2xl font-bold text-green-500">{formatUptime(uptime)}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">uptime</p>
+          <p className="text-2xl font-bold text-success">{formatUptime(uptime)}</p>
         </div>
       </div>
     </div>

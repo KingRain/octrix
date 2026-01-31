@@ -11,6 +11,7 @@ const startSimulationSchema = z.object({
   targetNamespace: z.string().min(1),
   targetResource: z.string().optional(),
   duration: z.number().min(10).max(3600).optional(),
+  parameters: z.record(z.unknown()).optional(),
 });
 
 router.get("/scenarios", async (_req: Request, res: Response) => {
@@ -78,7 +79,8 @@ router.post("/scenarios/:id/start", async (req: Request, res: Response) => {
       req.params.id,
       targetNamespace,
       targetResource,
-      duration
+      duration,
+      parseResult.data.parameters
     );
     res.status(201).json({ success: true, data: run, message: "Simulation started" });
   } catch (error) {

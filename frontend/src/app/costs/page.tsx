@@ -240,7 +240,7 @@ export default function CostsPage() {
       {/* Filters */}
       <div className="flex items-center gap-3">
         <Select value={deployment} onValueChange={setDeployment}>
-          <SelectTrigger className="w-[160px] bg-[#1a2332] border-[#2a3a4a] h-9">
+          <SelectTrigger className="w-[160px] bg-background border-border h-9">
             <SelectValue placeholder="Deployment: All" />
           </SelectTrigger>
           <SelectContent>
@@ -252,7 +252,7 @@ export default function CostsPage() {
         </Select>
 
         <Select value={action} onValueChange={setAction}>
-          <SelectTrigger className="w-[140px] bg-[#1a2332] border-[#2a3a4a] h-9">
+          <SelectTrigger className="w-[140px] bg-background border-border h-9">
             <SelectValue placeholder="Action: All" />
           </SelectTrigger>
           <SelectContent>
@@ -263,7 +263,7 @@ export default function CostsPage() {
         </Select>
 
         <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[140px] bg-[#1a2332] border-[#2a3a4a] h-9">
+          <SelectTrigger className="w-[140px] bg-background border-border h-9">
             <SelectValue placeholder="Time Range" />
           </SelectTrigger>
           <SelectContent>
@@ -277,42 +277,42 @@ export default function CostsPage() {
       {/* Summary Metrics Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Summary Metrics</h2>
-        <span className="text-sm text-emerald-400 font-medium">
+        <span className="text-sm text-success font-medium">
           {metrics.optimizationPercent}% from optimizations
         </span>
       </div>
 
       {/* Summary Metrics Cards */}
       <div className="grid gap-4 grid-cols-4">
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
+        <Card className="bg-card border-border">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs text-muted-foreground mb-1">
               Estimated Cost Before
             </p>
-            <p className="text-3xl font-semibold text-white">
-              ${metrics.estimatedCostBefore.toFixed(2)}
+            <p className="text-3xl font-semibold text-foreground">
+              {formatRupees(metrics.estimatedCostBefore)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
+        <Card className="bg-card border-border">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs text-muted-foreground mb-1">
               Estimated Cost After
             </p>
-            <p className="text-3xl font-semibold text-white">
-              ${metrics.estimatedCostAfter.toFixed(2)}
+            <p className="text-3xl font-semibold text-foreground">
+              {formatRupees(metrics.estimatedCostAfter)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
+        <Card className="bg-card border-border">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs text-muted-foreground mb-1">
               Total Cost Saved
             </p>
-            <p className="text-3xl font-semibold text-emerald-400">
-              ${metrics.totalCostSaved.toFixed(2)}
+            <p className="text-3xl font-semibold text-success">
+              {formatRupees(metrics.totalCostSaved)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               via {metrics.scaleDownCount} scale-down actions
@@ -320,13 +320,13 @@ export default function CostsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#0d1520] border-[#1a2a3a]">
+        <Card className="bg-card border-border">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs text-muted-foreground mb-1">
               Total Cost Incurred
             </p>
-            <p className="text-3xl font-semibold text-orange-400">
-              ${metrics.totalCostIncurred.toFixed(2)}
+            <p className="text-3xl font-semibold text-warning">
+              {formatRupees(metrics.totalCostIncurred)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               via {metrics.scaleUpCount} scale-up actions
@@ -340,13 +340,13 @@ export default function CostsPage() {
         <h2 className="text-lg font-medium">Cost Savings Breakdown</h2>
 
         {/* Avoidable Cost Banner */}
-        <div className="bg-gradient-to-r from-[#0a1a15] to-[#0d1520] border border-[#1a3a2a] rounded-lg py-3 px-4 flex items-center justify-between">
-          <span className="text-emerald-400 font-medium">
+        <div className="bg-muted border border-border rounded-lg py-3 px-4 flex items-center justify-between">
+          <span className="text-success font-medium">
             Total Avoidable Cost: {formatRupees(totalAvoidableCost)} / month
           </span>
           <span className="text-sm text-muted-foreground">
             Primary Cost Driver:{" "}
-            <span className="text-amber-400">{primaryCostDriver}</span>
+            <span className="text-primary">{primaryCostDriver}</span>
           </span>
         </div>
 
@@ -358,23 +358,23 @@ export default function CostsPage() {
               className={cn(
                 "border transition-all duration-200 hover:border-opacity-60",
                 issue.status === "optimized"
-                  ? "bg-[#0d1520] border-emerald-500/20"
-                  : "bg-[#0d1520] border-[#1a2a3a]",
+                  ? "bg-card border-success/20"
+                  : "bg-card border-border",
               )}
             >
               <CardContent className="p-5">
                 {/* Header with title and status */}
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-medium text-white">{issue.title}</h3>
+                  <h3 className="font-medium text-foreground">{issue.title}</h3>
                   <Badge
                     className={cn(
                       "text-xs font-medium px-2 py-0.5",
                       issue.status === "active" &&
-                        "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+                        "bg-success/20 text-success border-success/30",
                       issue.status === "optimized" &&
-                        "bg-blue-500/20 text-blue-400 border-blue-500/30",
+                        "bg-primary/20 text-primary border-primary/30",
                       issue.status === "pending" &&
-                        "bg-amber-500/20 text-amber-400 border-amber-500/30",
+                        "bg-warning/20 text-warning border-warning/30",
                     )}
                   >
                     {issue.status.toUpperCase()}
@@ -386,7 +386,7 @@ export default function CostsPage() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Monthly Cost Impact
                   </p>
-                  <p className="text-2xl font-semibold text-white">
+                  <p className="text-2xl font-semibold text-foreground">
                     {formatRupees(issue.monthlyCostImpact)}
                   </p>
                 </div>
@@ -397,13 +397,13 @@ export default function CostsPage() {
                     <span className="text-muted-foreground w-12 shrink-0">
                       Cause:
                     </span>
-                    <span className="text-gray-300">{issue.cause}</span>
+                    <span className="text-muted-foreground">{issue.cause}</span>
                   </div>
                   <div className="flex items-start gap-3">
                     <span className="text-muted-foreground w-12 shrink-0">
                       Scope:
                     </span>
-                    <span className="text-gray-300">{issue.scope}</span>
+                    <span className="text-muted-foreground">{issue.scope}</span>
                   </div>
                   <div className="flex items-start gap-3">
                     <span className="text-muted-foreground w-12 shrink-0">
@@ -412,12 +412,12 @@ export default function CostsPage() {
                     {issue.fixUrl ? (
                       <Link
                         href={issue.fixUrl}
-                        className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
+                        className="text-primary hover:text-primary/80 hover:underline transition-colors"
                       >
                         {issue.fix}
                       </Link>
                     ) : (
-                      <span className="text-cyan-400">{issue.fix}</span>
+                      <span className="text-primary">{issue.fix}</span>
                     )}
                   </div>
                 </div>
@@ -428,116 +428,72 @@ export default function CostsPage() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Cost Trend Chart - Takes 2 columns */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-medium">Cost Trend Over Time</h2>
-          <Card className="bg-[#0d1520] border-[#1a2a3a]">
-            <CardContent className="p-4">
-              <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trends}>
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: "#6b7280", fontSize: 11 }}
-                      axisLine={{ stroke: "#2a3a4a" }}
-                      tickLine={false}
-                    />
-                    <YAxis hide domain={["dataMin - 20", "dataMax + 20"]} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1a2332",
-                        border: "1px solid #2a3a4a",
-                        borderRadius: "8px",
-                        padding: "8px 12px",
-                      }}
-                      labelStyle={{ color: "#9ca3af" }}
-                      formatter={(value: number, name: string) => [
-                        `$${value.toFixed(2)}`,
-                        name === "before"
-                          ? "Before Optimization"
-                          : "After Optimization",
-                      ]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="before"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={false}
-                      name="before"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="after"
-                      stroke="#22c55e"
-                      strokeWidth={2}
-                      dot={false}
-                      name="after"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[#2a3a4a]">
-                <div className="flex items-center gap-2">
-                  <div className="h-0.5 w-4 bg-blue-500 rounded" />
-                  <span className="text-xs text-muted-foreground">
-                    Cost Before Actions
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-0.5 w-4 bg-emerald-500 rounded" />
-                  <span className="text-xs text-muted-foreground">
-                    Cost After Actions
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Efficiency Trends Chart */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-medium">Efficiency Trends</h2>
-          <Card className="bg-[#0d1520] border-[#1a2a3a] h-[280px]">
-            <CardContent className="p-4 h-full">
+      <div className="space-y-4">
+        {/* Cost Trend Chart - Full width */}
+        <h2 className="text-lg font-medium">Cost Trend Over Time</h2>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={efficiencyData} barCategoryGap="20%">
+                <LineChart data={trends}>
                   <XAxis
                     dataKey="date"
-                    tick={{ fill: "#6b7280", fontSize: 10 }}
-                    axisLine={false}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    axisLine={{ stroke: "var(--border)" }}
                     tickLine={false}
                   />
-                  <YAxis hide domain={[0, 100]} />
+                  <YAxis hide domain={["dataMin - 20", "dataMax + 20"]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1a2332",
-                      border: "1px solid #2a3a4a",
+                      backgroundColor: "var(--popover)",
+                      border: "1px solid var(--border)",
                       borderRadius: "8px",
+                      padding: "8px 12px",
                     }}
-                    formatter={(value: number) => [`${value}%`, "Efficiency"]}
+                    labelStyle={{ color: "var(--muted-foreground)" }}
+                    formatter={(value: number, name: string) => [
+                      `₹${value.toFixed(2)}`,
+                      name === "before"
+                        ? "Before Optimization"
+                        : "After Optimization",
+                    ]}
                   />
-                  <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={24}>
-                    {efficiencyData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={
-                          entry.value >= 85
-                            ? "#22c55e"
-                            : entry.value >= 70
-                              ? "#eab308"
-                              : "#ef4444"
-                        }
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
+                  <Line
+                    type="monotone"
+                    dataKey="before"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
+                    name="before"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="after"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={false}
+                    name="after"
+                  />
+                </LineChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2">
+                <div className="h-0.5 w-4 bg-blue-500 rounded" />
+                <span className="text-xs text-muted-foreground">
+                  Cost Before Actions
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-0.5 w-4 bg-emerald-500 rounded" />
+                <span className="text-xs text-muted-foreground">
+                  Cost After Actions
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

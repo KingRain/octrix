@@ -143,41 +143,41 @@ export function ServiceHexagon({ service, isConnected = false }: ServiceHexagonP
         </TooltipTrigger>
         <TooltipContent 
           side="right" 
-          className="bg-[#1a1a1a] border border-gray-700 p-3 rounded-lg shadow-xl"
+          className="bg-popover border border-border p-3 rounded-lg shadow-xl"
         >
           <div className="space-y-2">
-            <p className="text-sm font-medium text-white">{service.name.replace(/-/g, " ")}</p>
-            <div className="h-px bg-gray-700" />
+            <p className="text-sm font-medium text-foreground">{service.name.replace(/-/g, " ")}</p>
+            <div className="h-px bg-border" />
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                <span className="text-gray-400">Healthy:</span>
-                <span className="text-green-400 font-medium">{healthyCnt}</span>
+                <span className="text-muted-foreground">Healthy:</span>
+                <span className="text-success font-medium">{healthyCnt}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                <span className="text-gray-400">Healing:</span>
-                <span className="text-yellow-400 font-medium">{healingCnt}</span>
+                <span className="text-muted-foreground">Healing:</span>
+                <span className="text-warning font-medium">{healingCnt}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-gray-400">Failed:</span>
-                <span className="text-red-400 font-medium">{failedCnt}</span>
+                <span className="text-muted-foreground">Failed:</span>
+                <span className="text-destructive font-medium">{failedCnt}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-gray-400">Total:</span>
-                <span className="text-blue-400 font-medium">{service.pods.length}</span>
+                <span className="text-muted-foreground">Total:</span>
+                <span className="text-primary font-medium">{service.pods.length}</span>
               </div>
             </div>
-            <div className="h-px bg-gray-700" />
+            <div className="h-px bg-border" />
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400">CPU:</span>
-              <span className="text-cyan-400 font-medium">{(service.totalCpu / 1000).toFixed(2)} cores</span>
+              <span className="text-muted-foreground">CPU:</span>
+              <span className="text-primary font-medium">{(service.totalCpu / 1000).toFixed(2)} cores</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400">RAM:</span>
-              <span className="text-purple-400 font-medium">{formatBytes(service.totalMemory)}</span>
+              <span className="text-muted-foreground">RAM:</span>
+              <span className="text-primary font-medium">{formatBytes(service.totalMemory)}</span>
             </div>
           </div>
         </TooltipContent>

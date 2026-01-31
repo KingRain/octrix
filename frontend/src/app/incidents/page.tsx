@@ -349,9 +349,9 @@ function IncidentCard({ incident }: { incident: Incident }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={handleOpenChange}>
-      <Card className={cn("transition-all", isOpen && "ring-1 ring-border")}>
+      <Card className={cn("transition-all hover:shadow-lg hover:border-primary/30", isOpen && "ring-1 ring-border")}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-all duration-200">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div
@@ -382,33 +382,6 @@ function IncidentCard({ incident }: { incident: Incident }) {
                     <span>-</span>
                     <span>{incident.resource}</span>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    <span className="text-cyan-500 font-medium">
-                      SLO burn driver:
-                    </span>{" "}
-                    <span>
-                      {sloBurnDriverLabels[getSLOBurnDriver(incident)]}
-                    </span>
-                    {incident.sloBurnConfidence && (
-                      <span
-                        className={cn(
-                          "ml-1",
-                          getConfidenceColor(incident.sloBurnConfidence),
-                        )}
-                      >
-                        ({Math.round(incident.sloBurnConfidence * 100)}%
-                        confidence)
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <span className="text-amber-500 font-medium">
-                      Evidence:
-                    </span>{" "}
-                    <span className="italic">
-                      &quot;{getEvidence(incident)}&quot;
-                    </span>
-                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -431,159 +404,197 @@ function IncidentCard({ incident }: { incident: Incident }) {
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="pt-0 space-y-4">
-            {isLoadingSummary && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Generating AI-powered summary...</span>
-              </div>
-            )}
+          <CardContent className="pt-0">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Left Column - Incident Summary */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                    Incident Summary
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleLogsOpenChange(true)}
+                  >
+                    <Terminal className="mr-2 h-4 w-4" />
+                    View logs
+                  </Button>
+                </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Incident Summary
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleLogsOpenChange(true)}
-              >
-                <Terminal className="mr-2 h-4 w-4" />
-                View logs
-              </Button>
-            </div>
+                {isLoadingSummary && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Generating AI-powered summary...</span>
+                  </div>
+                )}
 
-            {summary && (
-              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
-                <div className="space-y-1">
-                  <div className="text-sm space-y-2">
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium">
-                        Incident #{incident.id.slice(0, 8)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Root suspect:</span>{" "}
-                      {summary.rootSuspect}
-                    </div>
-                    <div>
-                      <span className="font-medium">Impact:</span>{" "}
-                      {summary.impact}
-                    </div>
-                    <div className="space-y-1">
-                      <span className="font-medium">Signals:</span>
-                      <ul className="list-disc list-inside space-y-1 ml-2">
-                        {summary.signals.map((signal: string, idx: number) => (
-                          <li key={idx} className="text-xs">
-                            {signal}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="flex gap-4">
-                      <div>
-                        <span className="font-medium">Classification:</span>{" "}
-                        {summary.classification}
+                {summary && (
+                  <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                    <div className="space-y-2">
+                      <div className="text-sm space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span className="font-semibold">
+                            Incident #{incident.id.slice(0, 8)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-semibold">Root suspect:</span>{" "}
+                          {summary.rootSuspect}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Impact:</span>{" "}
+                          {summary.impact}
+                        </div>
+                        <div className="space-y-1">
+                          <span className="font-semibold">Signals:</span>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            {summary.signals.map((signal: string, idx: number) => (
+                              <li key={idx} className="text-xs">
+                                {signal}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>
+                            <span className="font-semibold">Classification:</span>{" "}
+                            {summary.classification}
+                          </div>
+                          <div>
+                            <span className="font-semibold">Blast radius:</span>{" "}
+                            {summary.blastRadius}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Generated at{" "}
+                          {new Date(summary.generatedAt).toLocaleString()}
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-medium">Blast radius:</span>{" "}
-                        {summary.blastRadius}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Generated at{" "}
-                      {new Date(summary.generatedAt).toLocaleString()}
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Right Column - Details */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                  Incident Details
+                </h3>
+
+                {/* SLO Burn Driver - High Priority */}
+                <div className="space-y-2 p-3 bg-muted/50 rounded-lg border">
+                  <div className="text-sm font-semibold text-foreground">
+                    SLO Burn Driver
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-medium text-cyan-500">
+                      {sloBurnDriverLabels[getSLOBurnDriver(incident)]}
+                    </span>
+                    {incident.sloBurnConfidence && (
+                      <span
+                        className={cn(
+                          "text-sm font-medium",
+                          getConfidenceColor(incident.sloBurnConfidence),
+                        )}
+                      >
+                        ({Math.round(incident.sloBurnConfidence * 100)}%
+                        confidence)
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-medium text-amber-500">Evidence:</span>{" "}
+                    <span className="italic">
+                      &quot;{getEvidence(incident)}&quot;
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Description
-                </p>
-                <p className="text-sm">{incident.description}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Suggested Action
-                </p>
-                <p className="text-sm">{incident.suggestedAction}</p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Namespace
-                </p>
-                <p className="text-sm">{incident.namespace}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Resource Type
-                </p>
-                <p className="text-sm capitalize">{incident.resourceType}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Auto-Healable
-                </p>
-                <Badge
-                  variant="outline"
-                  className={
-                    incident.autoHealable
-                      ? "bg-green-500/10 text-green-500"
-                      : "bg-red-500/10 text-red-500"
-                  }
-                >
-                  {incident.autoHealable ? "Yes" : "No"}
-                </Badge>
-              </div>
-            </div>
-
-            {incident.autoHealingAttempted && (
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Auto-Healing Result
-                </p>
-                <Badge
-                  variant="outline"
-                  className={
-                    incident.autoHealingResult === "success"
-                      ? "bg-green-500/10 text-green-500"
-                      : incident.autoHealingResult === "failed"
-                        ? "bg-red-500/10 text-red-500"
-                        : "bg-yellow-500/10 text-yellow-500"
-                  }
-                >
-                  {incident.autoHealingResult || "Pending"}
-                </Badge>
-              </div>
-            )}
-
-            {Object.keys(incident.metrics).length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Metrics
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(incident.metrics).map(([key, value]) => (
-                    <Badge key={key} variant="secondary" className="text-xs">
-                      {key}: {String(value)}
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Description
+                    </p>
+                    <p className="text-sm">{incident.description}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Suggested Action
+                    </p>
+                    <p className="text-sm">{incident.suggestedAction}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Namespace
+                    </p>
+                    <p className="text-sm">{incident.namespace}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Resource Type
+                    </p>
+                    <p className="text-sm capitalize">{incident.resourceType}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Auto-Healable
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className={
+                        incident.autoHealable
+                          ? "bg-green-500/10 text-green-500"
+                          : "bg-red-500/10 text-red-500"
+                      }
+                    >
+                      {incident.autoHealable ? "Yes" : "No"}
                     </Badge>
-                  ))}
+                  </div>
                 </div>
+
+                {incident.autoHealingAttempted && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Auto-Healing Result
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className={
+                        incident.autoHealingResult === "success"
+                          ? "bg-green-500/10 text-green-500"
+                          : incident.autoHealingResult === "failed"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-yellow-500/10 text-yellow-500"
+                      }
+                    >
+                      {incident.autoHealingResult || "Pending"}
+                    </Badge>
+                  </div>
+                )}
+
+                {Object.keys(incident.metrics).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Metrics
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(incident.metrics).map(([key, value]) => (
+                        <Badge key={key} variant="secondary" className="text-xs">
+                          {key}: {String(value)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Card>
 
       <Dialog open={isLogsOpen} onOpenChange={handleLogsOpenChange}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl">
           <DialogHeader>
             <DialogTitle>Incident logs</DialogTitle>
             <DialogDescription>
@@ -616,17 +627,17 @@ function IncidentCard({ incident }: { incident: Incident }) {
                   logs.commands.map((command, idx) => (
                     <div
                       key={`${command.label}-${idx}`}
-                      className="rounded-lg border bg-slate-950 text-slate-100"
+                      className="rounded-lg border bg-background text-foreground"
                     >
-                      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-foreground">
                           {command.label}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(command.updatedAt).toLocaleString()}
                         </span>
                       </div>
-                      <div className="px-3 py-2 text-xs text-slate-400">
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
                         {command.command}
                       </div>
                       <pre className="px-3 pb-3 text-xs whitespace-pre-wrap">
@@ -640,7 +651,7 @@ function IncidentCard({ incident }: { incident: Incident }) {
                               key={`${command.label}-${lineIdx}`}
                               className={
                                 isHighlighted
-                                  ? "block rounded bg-amber-500/20 text-amber-100"
+                                  ? "block rounded bg-yellow-500/20 text-foreground"
                                   : "block"
                               }
                             >

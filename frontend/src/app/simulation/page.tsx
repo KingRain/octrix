@@ -19,23 +19,43 @@ import {
   ImageOff,
   Square,
   Tag,
+  WifiOff, // Network Blackhole
+  FileDiff, // Config Drift
+  ShieldAlert, // Readiness Lies
+  Zap, // Silent Failure Section Header
+  Clock, // Pod Running App Broken (High Latency)
+  MemoryStick,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  useSimulator,
-  type SimulationScenario,
-} from "@/hooks/use-simulator";
+import { useSimulator, type SimulationScenario } from "@/hooks/use-simulator";
+import { useOverview } from "@/hooks/use-overview";
+import type { ServiceGroup } from "@/types/overview";
+import { cn } from "@/lib/utils";
 
 const scenarioIcons: Record<string, typeof HardDrive> = {
   "oom-killed": HardDrive,
   "high-cpu": Cpu,
   "crash-loop": RefreshCw,
   "pod-throttling": Gauge,
-  "underutilization": TrendingDown,
+  underutilization: TrendingDown,
   "node-eviction": Server,
   "image-pull-delay": ImageOff,
   "buggy-deployment": Bug,
@@ -43,6 +63,11 @@ const scenarioIcons: Record<string, typeof HardDrive> = {
   "db-failure": Database,
   "unknown-crash": HelpCircle,
   "multi-service-failure": Layers,
+  // Silent Failures
+  "pod-running-app-broken": Clock,
+  "readiness-lies": ShieldAlert,
+  "config-drift": FileDiff,
+  "network-blackhole": WifiOff,
 };
 
 const severityColors: Record<string, string> = {
@@ -62,7 +87,10 @@ function ScenarioCard({ scenario, onRun, isRunning }: ScenarioCardProps) {
   const Icon = scenarioIcons[scenario.type] || HelpCircle;
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card
+      className="relative overflow-hidden cursor-pointer hover:shadow-lg hover:bg-accent/50 transition-all border-2"
+      onClick={() => onRun(scenario.id)}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-muted">
@@ -70,13 +98,9 @@ function ScenarioCard({ scenario, onRun, isRunning }: ScenarioCardProps) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <CardTitle className="text-base truncate">{scenario.name}</CardTitle>
-              {scenario.autoHealable && (
-                <Badge variant="outline" className="text-xs gap-1 bg-green-500/5 border-green-500/20 text-green-500 shrink-0">
-                  <Shield className="h-3 w-3" />
-                  Auto-Healable
-                </Badge>
-              )}
+              <CardTitle className="text-lg truncate">
+                {scenario.name}
+              </CardTitle>
             </div>
             <CardDescription className="text-xs mt-1">
               {scenario.description}
@@ -86,32 +110,135 @@ function ScenarioCard({ scenario, onRun, isRunning }: ScenarioCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={severityColors[scenario.severity] || "bg-gray-500/10"}>
-            {scenario.severity.toUpperCase()}
+          <Badge
+            variant="outline"
+            className={severityColors[scenario.severity] || "bg-gray-500/10"}
+          >
+            <span className="text-[10px]">{scenario.severity.toUpperCase()}</span>
           </Badge>
-          <Badge variant="outline" className={scenario.autoHealable ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}>
-            {scenario.autoHealable ? "Auto-Heal" : "Escalate"}
+          <Badge
+            variant="outline"
+            className={
+              scenario.autoHealable
+                ? "bg-green-500/10 text-green-500"
+                : "bg-red-500/10 text-red-500"
+            }
+          >
+            <span className="text-[10px]">{scenario.autoHealable ? "Auto-Heal" : "Escalate"}</span>
           </Badge>
         </div>
 
+        {isRunning ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Running...</span>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CustomPodSpawner({
+  onRun,
+  isRunning,
+  services,
+}: {
+  onRun: (id: string, params: any) => void;
+  isRunning: boolean;
+  services: ServiceGroup[];
+}) {
+  const [memoryLimit, setMemoryLimit] = useState(128);
+  const [simulateActivity, setSimulateActivity] = useState(false);
+  const [selectedCluster, setSelectedCluster] = useState<string>("");
+  const [isPending, setIsPending] = useState(false);
+
+  const handleSpawn = async () => {
+    if (!selectedCluster) {
+      return;
+    }
+    setIsPending(true);
+    try {
+      await onRun("custom-oom", {
+        memoryLimitMi: memoryLimit,
+        simulateActivity,
+        targetResource: selectedCluster,
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <Card className="border-border bg-card mb-8">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <MemoryStick className="h-5 w-5 text-primary" />
+          <CardTitle className="text-base text-foreground">
+            Custom Pod Spawner
+          </CardTitle>
+        </div>
+        <CardDescription>
+          Spawn a custom pod with configurable memory and activity simulation
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>Target Cluster/Service</Label>
+            <Select value={selectedCluster} onValueChange={setSelectedCluster}>
+              <SelectTrigger className="bg-background/50">
+                <SelectValue placeholder="Select cluster" />
+              </SelectTrigger>
+              <SelectContent>
+                {services.map((s) => (
+                  <SelectItem key={s.name} value={s.name}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Memory Limit: {memoryLimit} Mi</Label>
+            <input
+              type="range"
+              min="64"
+              max="512"
+              step="64"
+              value={memoryLimit}
+              onChange={(e) => setMemoryLimit(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>64 Mi</span>
+              <span>512 Mi</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Simulate Activity</Label>
+            <div className="flex items-center gap-2 p-2 rounded-md border bg-background/50 h-10">
+              <Switch
+                checked={simulateActivity}
+                onCheckedChange={setSimulateActivity}
+              />
+              <span className="text-sm text-muted-foreground">
+                {simulateActivity ? "Enabled" : "Disabled"}
+              </span>
+            </div>
+          </div>
+        </div>
         <Button
-          variant="outline"
-          className="w-full"
-          size="sm"
-          onClick={() => onRun(scenario.id)}
-          disabled={isRunning}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+          onClick={handleSpawn}
+          disabled={isPending || isRunning || !selectedCluster}
         >
-          {isRunning ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Running...
-            </>
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <>
-              <Play className="mr-2 h-4 w-4" />
-              Run Simulation
-            </>
+            <Play className="mr-2 h-4 w-4" />
           )}
+          Spawn Pod
         </Button>
       </CardContent>
     </Card>
@@ -126,26 +253,47 @@ export default function SimulatorPage() {
     error,
     refetch,
     startSimulation,
+    stopSimulation,
     cancelSimulation,
   } = useSimulator();
+  const { overview } = useOverview();
+  const [runningScenarios, setRunningScenarios] = useState<Set<string>>(
+    new Set(),
+  );
 
-  const [runningScenarios, setRunningScenarios] = useState<Set<string>>(new Set());
+  const handleRunScenario = async (scenarioId: string, params?: any) => {
+    // If scenarioId is "custom-oom", we might need to find the real ID from the list
+    let realId = scenarioId;
+    if (scenarioId === "custom-oom") {
+      const customScenario = scenarios.find((s) => s.type === "custom-oom");
+      if (customScenario) realId = customScenario.id;
+      else {
+        // Fallback: Use any scenario ID if backend supports loose types, but better to fail or warn
+        console.error("Custom OOM scenario not found in backend list");
+        return;
+      }
+    }
 
-  const handleRunScenario = async (scenarioId: string) => {
-    setRunningScenarios((prev) => new Set(prev).add(scenarioId));
+    setRunningScenarios((prev) => new Set(prev).add(realId));
     try {
-      await startSimulation(scenarioId, "default", "cdn-cache", 60);
+      await startSimulation(
+        realId,
+        "default",
+        params?.targetResource || "custom-oom-pod",
+        60,
+        params,
+      );
     } finally {
       setRunningScenarios((prev) => {
         const next = new Set(prev);
-        next.delete(scenarioId);
+        next.delete(realId);
         return next;
       });
     }
   };
 
   const handleStopSimulation = async (runId: string) => {
-    await cancelSimulation(runId);
+    await stopSimulation(runId);
   };
 
   if (isLoading) {
@@ -160,9 +308,12 @@ export default function SimulatorPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Simulator</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Simulator & Fault Injection
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Controlled failure injection for testing incident detection and auto-healing
+            Controlled failure injection for testing incident detection and
+            auto-healing
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -178,6 +329,12 @@ export default function SimulatorPage() {
           </CardContent>
         </Card>
       )}
+
+      <CustomPodSpawner
+        onRun={handleRunScenario}
+        isRunning={false}
+        services={overview?.services || []}
+      />
 
       {activeRuns.length > 0 && (
         <div className="space-y-3">
@@ -231,15 +388,70 @@ export default function SimulatorPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {scenarios.map((scenario) => (
-            <ScenarioCard
-              key={scenario.id}
-              scenario={scenario}
-              onRun={handleRunScenario}
-              isRunning={runningScenarios.has(scenario.id)}
-            />
-          ))}
+        <div className="space-y-8">
+          {/* Standard Chaos Engineering Scenarios */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium tracking-tight">
+                Standard Chaos Engineering
+              </h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {scenarios
+                .filter(
+                  (s) =>
+                    ![
+                      "pod-running-app-broken",
+                      "readiness-lies",
+                      "config-drift",
+                      "network-blackhole",
+                    ].includes(s.type),
+                )
+                .map((scenario) => (
+                  <ScenarioCard
+                    key={scenario.id}
+                    scenario={scenario}
+                    onRun={handleRunScenario}
+                    isRunning={runningScenarios.has(scenario.id)}
+                  />
+                ))}
+            </div>
+          </div>
+
+          {/* New Silent Failure Scenarios */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-medium tracking-tight flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                  Silent Failure Simulations
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Simulate stealthy issues that pass standard health checks but
+                  degrade user experience.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {scenarios
+                .filter((s) =>
+                  [
+                    "pod-running-app-broken",
+                    "readiness-lies",
+                    "config-drift",
+                    "network-blackhole",
+                  ].includes(s.type),
+                )
+                .map((scenario) => (
+                  <ScenarioCard
+                    key={scenario.id}
+                    scenario={scenario}
+                    onRun={handleRunScenario}
+                    isRunning={runningScenarios.has(scenario.id)}
+                  />
+                ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
