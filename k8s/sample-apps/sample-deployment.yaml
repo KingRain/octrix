@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sample-apps
+  labels:
+    app.kubernetes.io/part-of: octrix-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-demo
+  namespace: sample-apps
+  labels:
+    app: nginx-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-demo
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-demo
+  namespace: sample-apps
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: nginx-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-demo
+  namespace: sample-apps
+  labels:
+    app: redis-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-demo
+  template:
+    metadata:
+      labels:
+        app: redis-demo
+    spec:
+      containers:
+        - name: redis
+          image: redis:alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-demo
+  namespace: sample-apps
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stress-target
+  namespace: sample-apps
+  labels:
+    app: stress-target
+    purpose: chaos-testing
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: stress-target
+  template:
+    metadata:
+      labels:
+        app: stress-target
+        purpose: chaos-testing
+    spec:
+      containers:
+        - name: stress
+          image: polinux/stress
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stress-target
+  namespace: sample-apps
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: stress-target

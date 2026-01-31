@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: octrix-backend-config
+  namespace: octrix
+data:
+  PORT: "3001"
+  NODE_ENV: "production"
+  PROMETHEUS_URL: "http://prometheus.monitoring.svc.cluster.local:9090"
+  PROMETHEUS_SCRAPE_INTERVAL: "15000"
+  CORS_ORIGIN: "http://localhost:3000"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: octrix-backend-secrets
+  namespace: octrix
+type: Opaque
+stringData:
+  JWT_SECRET: "octrix-jwt-secret-change-in-production-min32chars!"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: octrix-backend
+  namespace: octrix
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: octrix-backend
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - pods
+      - services
+      - namespaces
+      - endpoints
+      - persistentvolumeclaims
+      - events
+    verbs: ["get", "list", "watch", "delete", "patch"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+      - daemonsets
+      - statefulsets
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments/scale
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["batch"]
+    resources:
+      - jobs
+      - cronjobs
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: octrix-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: octrix-backend
+subjects:
+  - kind: ServiceAccount
+    name: octrix-backend
+    namespace: octrix
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: octrix-backend
+  namespace: octrix
+  labels:
+    app: octrix-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: octrix-backend
+  template:
+    metadata:
+      labels:
+        app: octrix-backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/api/v1/health"
+    spec:
+      serviceAccountName: octrix-backend
+      containers:
+        - name: backend
+          image: octrix-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: octrix-backend-config
+            - secretRef:
+                name: octrix-backend-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: octrix-backend
+  namespace: octrix
+  labels:
+    app: octrix-backend
+spec:
+  type: NodePort
+  ports:
+    - port: 3001
+      targetPort: 3001
+      nodePort: 30001
+      name: http
+  selector:
+    app: octrix-backend
