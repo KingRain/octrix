@@ -5,6 +5,7 @@ import { Server, Loader2, Copy, RefreshCw, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ClusterSelector } from "@/components/shared/cluster-selector";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -178,7 +179,9 @@ export default function NodesPage() {
             machine which hosts deployments.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <ClusterSelector />
+          <div className="h-6 w-px bg-gray-700" />
           <Button
             variant="destructive"
             onClick={handleRestartAll}
