@@ -8,7 +8,6 @@ import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
 import type { ServiceGroup } from "@/types/overview";
-import { ClusterSelector } from "@/components/shared/cluster-selector";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
@@ -140,7 +139,6 @@ export default function OverviewPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <ClusterSelector />
           <div className="h-6 w-px bg-gray-700" />
           <div className="flex items-center gap-6 text-xs">
             <div className="flex items-center gap-2">

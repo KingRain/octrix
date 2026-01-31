@@ -40,7 +40,7 @@ class HealingRulesManager {
 
   constructor() {
     this.loadDefaultRules();
-    // Removed sample events loading to show only real data
+    this.loadSampleEvents();
   }
 
   private loadDefaultRules() {
@@ -196,11 +196,6 @@ class HealingRulesManager {
 
   getEvents(limit = 100): HealingEvent[] {
     return this.events.slice(0, limit);
-  }
-
-  clearEvents(): void {
-    this.events = [];
-    logger.info("Healing events cleared");
   }
 
   getEventsByRule(ruleId: string, limit = 50): HealingEvent[] {

@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   ResponsiveContainer,
@@ -35,12 +34,6 @@ import {
   Cell,
 } from "recharts";
 import Link from "next/link";
-import { useNodeUtilization } from "@/hooks/use-node-utilization";
-import {
-  ClusterUtilizationOverview,
-  NodeUtilizationTable,
-  CostOptimizationInsights,
-} from "@/components/costs";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -100,18 +93,11 @@ export default function CostsPage() {
   const [deployment, setDeployment] = useState("all");
   const [action, setAction] = useState("all");
   const [timeRange, setTimeRange] = useState("7d");
-  const [activeTab, setActiveTab] = useState("overview");
   const [isLoading, setIsLoading] = useState(true);
   const [costData, setCostData] = useState<CostSummary | null>(null);
   const [efficiencyData, setEfficiencyData] = useState<
     Array<{ date: string; value: number }>
   >([]);
-
-  const {
-    data: nodeUtilizationData,
-    isLoading: nodeUtilLoading,
-    refetch: refetchNodeUtil,
-  } = useNodeUtilization();
 
   const fetchCostData = async () => {
     try {
@@ -245,14 +231,7 @@ export default function CostsPage() {
             Cost insights and resource optimization overview.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            fetchCostData();
-            refetchNodeUtil();
-          }}
-        >
+        <Button variant="outline" size="sm" onClick={fetchCostData}>
           <RefreshCw className="mr-2 h-4 w-4" />
           Refresh
         </Button>
@@ -295,22 +274,13 @@ export default function CostsPage() {
         </Select>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="overview">Cost Overview</TabsTrigger>
-          <TabsTrigger value="node-utilization">Node Utilization</TabsTrigger>
-        </TabsList>
-
-        {/* Cost Overview Tab */}
-        <TabsContent value="overview" className="space-y-6 mt-0">
-          {/* Summary Metrics Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Summary Metrics</h2>
-            <span className="text-sm text-success font-medium">
-              {metrics.optimizationPercent}% from optimizations
-            </span>
-          </div>
+      {/* Summary Metrics Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium">Summary Metrics</h2>
+        <span className="text-sm text-success font-medium">
+          {metrics.optimizationPercent}% from optimizations
+        </span>
+      </div>
 
       {/* Summary Metrics Cards */}
       <div className="grid gap-4 grid-cols-4">
@@ -525,23 +495,6 @@ export default function CostsPage() {
           </CardContent>
         </Card>
       </div>
-        </TabsContent>
-
-        {/* Node Utilization Tab */}
-        <TabsContent value="node-utilization" className="space-y-6 mt-0">
-          {nodeUtilLoading || !nodeUtilizationData ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              <ClusterUtilizationOverview summary={nodeUtilizationData.summary} />
-              <NodeUtilizationTable nodes={nodeUtilizationData.nodes} />
-              <CostOptimizationInsights insights={nodeUtilizationData.insights} />
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

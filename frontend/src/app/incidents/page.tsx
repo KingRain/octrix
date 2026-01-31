@@ -24,10 +24,7 @@ import {
   ImageOff,
   XCircle,
   Terminal,
-  Activity,
 } from "lucide-react";
-import { CompactVerticalTimeline, type TimelineEvent } from "@/components/ui/compact-vertical-timeline";
-import { useTimeline } from "@/hooks/use-timeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -679,11 +676,10 @@ export default function IncidentsPage() {
   const { incidents, stats, isLoading, error, refetch, clearHistory } =
     useIncidents();
   const [isClearing, setIsClearing] = useState(false);
-  const { events: timelineEvents, isLoading: timelineLoading, clear: clearTimeline } = useTimeline();
 
   const handleClearHistory = async () => {
     setIsClearing(true);
-    await Promise.all([clearHistory(), clearTimeline()]);
+    await clearHistory();
     setIsClearing(false);
   };
 
@@ -740,57 +736,29 @@ export default function IncidentsPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Incidents List */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Recent Incidents</h2>
-          </div>
-
-          {incidents.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                <p className="text-lg font-medium">No incidents detected</p>
-                <p className="text-sm text-muted-foreground">
-                  Your cluster is running smoothly. Use the Simulator to test
-                  incident detection.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {incidents.map((incident) => (
-                <IncidentCard key={incident.id} incident={incident} />
-              ))}
-            </div>
-          )}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Recent Incidents</h2>
         </div>
 
-        {/* Right Column - Activity Timeline */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-6">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-blue-500" />
-                <CardTitle className="text-base">Activity Timeline</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {timelineLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : timelineEvents.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8 text-sm">
-                  No activity yet
-                </div>
-              ) : (
-                <CompactVerticalTimeline events={timelineEvents} />
-              )}
+        {incidents.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+              <p className="text-lg font-medium">No incidents detected</p>
+              <p className="text-sm text-muted-foreground">
+                Your cluster is running smoothly. Use the Simulator to test
+                incident detection.
+              </p>
             </CardContent>
           </Card>
-        </div>
+        ) : (
+          <div className="space-y-3">
+            {incidents.map((incident) => (
+              <IncidentCard key={incident.id} incident={incident} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

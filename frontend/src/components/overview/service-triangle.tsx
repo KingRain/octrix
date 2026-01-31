@@ -153,8 +153,8 @@ export function ServiceTriangle({
                   className="transition-all duration-300"
                   style={{
                     fill: isHovered
-                      ? "rgba(31, 41, 55, 0.15)"
-                      : "rgba(59, 130, 246, 0.08)",
+                      ? "rgba(59, 130, 246, 0.08)"
+                      : "rgba(31, 41, 55, 0.15)",
                     stroke: isHovered ? "#3b82f6" : "#374151",
                     strokeWidth: isHovered ? 1.5 : 1,
                   }}
