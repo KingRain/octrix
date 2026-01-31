@@ -47,6 +47,13 @@ export interface ClusterOverview {
   usedMemory: number;
 }
 
+export interface PodMetricsInfo {
+  name: string;
+  namespace: string;
+  cpuMillicores: number;
+  memoryBytes: number;
+}
+
 export interface NodeMetrics {
   nodeName: string;
   cpuUsagePercent: number;
@@ -58,4 +65,5 @@ export interface NodeMetrics {
   diskUsagePercent: number;
   podCount: number;
   uptimeSeconds: number;
+  podMetrics?: PodMetricsInfo[];
 }

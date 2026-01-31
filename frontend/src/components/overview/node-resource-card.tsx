@@ -1,6 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { NeedleBarGauge } from "./needle-bar-gauge";
+
+interface PodMetricsInfo {
+  name: string;
+  namespace: string;
+  cpuMillicores: number;
+  memoryBytes: number;
+}
 
 interface NodeResourceCardProps {
   nodeName: string;
@@ -12,16 +20,28 @@ interface NodeResourceCardProps {
   memoryTotalBytes: number;
   podCount: number;
   uptimeSeconds: number;
+  podMetrics?: PodMetricsInfo[];
 }
 
 function formatBytes(bytes: number): string {
-  const gb = bytes / (1024 * 1024 * 1024);
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KiB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(1)} MiB`;
+  const gb = mb / 1024;
   return `${gb.toFixed(1)} GiB`;
 }
 
 function formatUptime(seconds: number): string {
+  if (seconds === 0) return "N/A";
   const hours = seconds / 3600;
   return `${hours.toFixed(2)} hour`;
+}
+
+function formatMillicores(millicores: number): string {
+  if (millicores < 1000) return `${millicores}m`;
+  return `${(millicores / 1000).toFixed(2)} cores`;
 }
 
 function ResourceGauge({ label, value }: { label: string; value: number }) {
@@ -42,8 +62,62 @@ function ResourceGauge({ label, value }: { label: string; value: number }) {
   return <NeedleBarGauge value={displayValue} label={label} />;
 }
 
-export function NodeResourceCard({ 
-  nodeName, 
+function PodMetricsTooltip({ pods }: { pods: PodMetricsInfo[] }) {
+  if (!pods || pods.length === 0) {
+    return (
+      <div className="p-3 text-sm text-gray-400">
+        No pod metrics available
+      </div>
+    );
+  }
+
+  // Sort by CPU usage descending
+  const sortedPods = [...pods].sort((a, b) => b.cpuMillicores - a.cpuMillicores);
+  const displayPods = sortedPods.slice(0, 10); // Show top 10
+
+  return (
+    <div className="p-3 max-h-80 overflow-y-auto">
+      <div className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+        Pod Resource Usage (Top {displayPods.length})
+      </div>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-gray-500 border-b border-gray-700">
+            <th className="text-left py-1 pr-2">Pod</th>
+            <th className="text-right py-1 px-2">CPU</th>
+            <th className="text-right py-1 pl-2">Memory</th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayPods.map((pod, idx) => (
+            <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+              <td className="py-1.5 pr-2">
+                <div className="font-mono text-gray-300 truncate max-w-[150px]" title={pod.name}>
+                  {pod.name}
+                </div>
+                <div className="text-gray-500 text-[10px]">{pod.namespace}</div>
+              </td>
+              <td className="text-right py-1.5 px-2 font-mono text-blue-400">
+                {formatMillicores(pod.cpuMillicores)}
+              </td>
+              <td className="text-right py-1.5 pl-2 font-mono text-purple-400">
+                {formatBytes(pod.memoryBytes)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {pods.length > 10 && (
+        <div className="text-xs text-gray-500 mt-2 text-center">
+          +{pods.length - 10} more pods
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function NodeResourceCard({
+  nodeName,
   cpuUsagePercent,
   cpuUsedCores,
   cpuTotalCores,
@@ -52,29 +126,48 @@ export function NodeResourceCard({
   memoryTotalBytes,
   podCount,
   uptimeSeconds,
+  podMetrics,
 }: NodeResourceCardProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   return (
-    <div className="bg-card rounded-xl border border-border hover:border-muted-foreground transition-colors overflow-hidden">
+    <div
+      className="bg-card rounded-xl border border-border hover:border-muted-foreground transition-colors overflow-hidden relative"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* Pod metrics tooltip on hover */}
+      {showTooltip && podMetrics && podMetrics.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-gray-900 rounded-lg border border-gray-700 shadow-xl">
+          <PodMetricsTooltip pods={podMetrics} />
+        </div>
+      )}
+
       <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
         <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
         <h3 className="text-base font-medium text-foreground">~ {nodeName}</h3>
+        {podMetrics && podMetrics.length > 0 && (
+          <span className="ml-auto text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
+            Hover for pod details
+          </span>
+        )}
       </div>
-      
+
       <div className="grid grid-cols-3 divide-x divide-border">
         <div className="p-6 flex items-center justify-center">
           <ResourceGauge label="CPU Usage" value={cpuUsagePercent} />
         </div>
-        
+
         <div className="p-6 flex items-center justify-center">
           <ResourceGauge label="RAM Usage" value={memoryUsagePercent} />
         </div>
-        
+
         <div className="p-6 flex flex-col items-center justify-center">
           <p className="text-sm text-muted-foreground mb-2">Pods on node</p>
           <p className="text-6xl font-bold text-primary font-mono">{podCount}</p>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-5 divide-x divide-border border-t border-border">
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">CPU Used</p>
@@ -82,7 +175,7 @@ export function NodeResourceCard({
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">CPU Total</p>
-          <p className="text-xl font-semibold text-foreground font-mono">{cpuTotalCores}</p>
+          <p className="text-xl font-semibold text-foreground font-mono">{cpuTotalCores.toFixed(1)}</p>
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">RAM Used</p>

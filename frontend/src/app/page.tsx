@@ -24,7 +24,7 @@ export default function OverviewPage() {
   useBackendStatus();
   const [nodeMetrics, setNodeMetrics] = useState<NodeMetrics[]>([]);
   const [oomWarnings, setOomWarnings] = useState<OOMWarning[]>([]);
-  
+
   const [displayServices, setDisplayServices] = useState<ServiceGroup[]>([]);
   const [displayStats, setDisplayStats] = useState({
     usedCpu: 0,
@@ -60,7 +60,7 @@ export default function OverviewPage() {
           setHealerEnabled(data.data.enabled);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function OverviewPage() {
             setNodeMetrics(data.data);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     fetchNodes();
     const interval = setInterval(fetchNodes, 5000);
@@ -124,13 +124,13 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6 min-h-screen bg-gray-100 p-6">
-      <OOMAlertPopup 
-        alerts={oomWarnings} 
+      <OOMAlertPopup
+        alerts={oomWarnings}
         onDismiss={(podName) => {
           setOomWarnings(prev => prev.filter(w => w.podName !== podName));
         }}
       />
-      
+
       <div className="flex items-center justify-between bg-gray-200 p-4 rounded-lg">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Overview</h1>
@@ -240,6 +240,7 @@ export default function OverviewPage() {
                 memoryTotalBytes={node.memoryTotalBytes}
                 podCount={node.podCount}
                 uptimeSeconds={node.uptimeSeconds}
+                podMetrics={node.podMetrics}
               />
             ))}
           </div>
