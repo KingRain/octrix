@@ -14,7 +14,7 @@ export default function ClusterPage() {
   const healthyNodes = mockNodes.filter((n) => n.status === "ready").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Cluster Overview</h1>
         <p className="text-sm text-muted-foreground">

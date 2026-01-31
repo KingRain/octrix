@@ -173,7 +173,7 @@ function CustomPodSpawner({
     <Card className="border-border bg-card mb-8">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <MemoryStick className="h-5 w-5 text-primary" />
+          <MemoryStick className="h-5 w-5 text-green-500" />
           <CardTitle className="text-base text-foreground">
             Custom Pod Spawner
           </CardTitle>
@@ -185,9 +185,9 @@ function CustomPodSpawner({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Target Cluster/Service</Label>
+            <Label className="text-sm font-medium">Target Cluster/Service</Label>
             <Select value={selectedCluster} onValueChange={setSelectedCluster}>
-              <SelectTrigger className="bg-background/50">
+              <SelectTrigger className="bg-background/50 border-border hover:border-green-500/50 transition-colors">
                 <SelectValue placeholder="Select cluster" />
               </SelectTrigger>
               <SelectContent>
@@ -200,7 +200,7 @@ function CustomPodSpawner({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Memory Limit: {memoryLimit} Mi</Label>
+            <Label className="text-sm font-medium">Memory Limit: {memoryLimit} Mi</Label>
             <input
               type="range"
               min="64"
@@ -208,7 +208,7 @@ function CustomPodSpawner({
               step="64"
               value={memoryLimit}
               onChange={(e) => setMemoryLimit(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-green-500"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>64 Mi</span>
@@ -216,8 +216,8 @@ function CustomPodSpawner({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Simulate Activity</Label>
-            <div className="flex items-center gap-2 p-2 rounded-md border bg-background/50 h-10">
+            <Label className="text-sm font-medium">Simulate Activity</Label>
+            <div className="flex items-center gap-2 p-2 rounded-md border border-border bg-background/50 h-10 hover:border-green-500/50 transition-colors">
               <Switch
                 checked={simulateActivity}
                 onCheckedChange={setSimulateActivity}
@@ -229,7 +229,8 @@ function CustomPodSpawner({
           </div>
         </div>
         <Button
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+          variant="outline"
+          className="w-full border-green-500 text-green-500 hover:bg-green-500/10 hover:text-green-400"
           onClick={handleSpawn}
           disabled={isPending || isRunning || !selectedCluster}
         >
@@ -305,7 +306,7 @@ export default function SimulatorPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -393,7 +394,7 @@ export default function SimulatorPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium tracking-tight">
-                Standard Chaos Engineering
+                Production Scenarios
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -423,7 +424,6 @@ export default function SimulatorPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-medium tracking-tight flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-amber-500" />
                   Silent Failure Simulations
                 </h2>
                 <p className="text-sm text-muted-foreground">

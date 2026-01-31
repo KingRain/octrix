@@ -57,7 +57,7 @@ export function NodeResourceCard({
     <div className="bg-card rounded-xl border border-border hover:border-muted-foreground transition-colors overflow-hidden">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
         <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-        <h3 className="text-base font-medium text-foreground">~ {nodeName}</h3>
+        <h3 className="text-base font-medium text-gray-900">~ {nodeName}</h3>
       </div>
       
       <div className="grid grid-cols-3 divide-x divide-border">
@@ -71,30 +71,30 @@ export function NodeResourceCard({
         
         <div className="p-6 flex flex-col items-center justify-center">
           <p className="text-sm text-muted-foreground mb-2">Pods on node</p>
-          <p className="text-6xl font-bold text-primary font-mono">{podCount}</p>
+          <p className="text-6xl font-bold text-gray-900 font-mono">{podCount}</p>
         </div>
       </div>
       
       <div className="grid grid-cols-5 divide-x divide-border border-t border-border">
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">CPU Used</p>
-          <p className="text-xl font-semibold text-success font-mono">{cpuUsedCores.toFixed(3)}</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuUsedCores.toFixed(3)}</p>
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">CPU Total</p>
-          <p className="text-xl font-semibold text-foreground font-mono">{cpuTotalCores}</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuTotalCores}</p>
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">RAM Used</p>
-          <p className="text-xl font-semibold text-warning font-mono">{formatBytes(memoryUsageBytes)}</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{formatBytes(memoryUsageBytes)}</p>
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">RAM Total</p>
-          <p className="text-xl font-semibold text-foreground font-mono">{formatBytes(memoryTotalBytes)}</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{formatBytes(memoryTotalBytes)}</p>
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-muted-foreground uppercase mb-2">Uptime</p>
-          <p className="text-xl font-semibold text-primary font-mono">{formatUptime(uptimeSeconds)}</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{formatUptime(uptimeSeconds)}</p>
         </div>
       </div>
     </div>

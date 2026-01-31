@@ -169,11 +169,11 @@ export default function NodesPage() {
   }
 
   return (
-    <div className="space-y-6 bg-gray-100 min-h-screen p-6">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Nodes</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Nodes</h1>
+          <p className="text-sm text-gray-600">
             The base Kubernetes Node resource represents a virtual or physical
             machine which hosts deployments.
           </p>
@@ -255,30 +255,30 @@ export default function NodesPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-blue-600 font-mono text-sm hover:underline cursor-pointer">
+                    <span className="text-gray-900 font-mono text-sm hover:underline cursor-pointer">
                       {node.nodeName}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     Control Plane, Etcd
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                  <td className="px-4 py-3 text-sm text-gray-900 font-mono">
                     v1.27.6+k3s1
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="flex items-center gap-2 text-sm text-gray-900">
                       <span>- / 192.168.3.{21 + idx}</span>
-                      <Copy className="h-3 w-3 text-gray-500 cursor-pointer hover:text-gray-300" />
+                      <Copy className="h-3 w-3 text-gray-500 cursor-pointer hover:text-gray-700" />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">Linux</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">Linux</td>
                   <td className="px-4 py-3">
                     <div className="space-y-1">
                       <ProgressBar
                         value={node.cpuUsagePercent}
                         color={getProgressColor(node.cpuUsagePercent)}
                       />
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-900">
                         {node.cpuUsagePercent.toFixed(1)}%
                       </span>
                     </div>
@@ -289,15 +289,15 @@ export default function NodesPage() {
                         value={node.memoryUsagePercent}
                         color={getProgressColor(node.memoryUsagePercent)}
                       />
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-900">
                         {node.memoryUsagePercent.toFixed(0)}%
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     {node.podCount}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     {formatUptime(node.uptimeSeconds)}
                   </td>
                 </tr>
@@ -310,7 +310,7 @@ export default function NodesPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Server className="h-4 w-4 text-purple-400" />
+            <Server className="h-4 w-4 text-gray-900" />
             <h2 className="text-lg font-medium">Pods ({pods.length})</h2>
           </div>
         </div>
@@ -352,10 +352,10 @@ export default function NodesPage() {
                     key={pod.id}
                     className="border-b border-gray-100 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 text-sm font-mono text-blue-600">
+                    <td className="px-4 py-3 text-sm font-mono text-gray-900">
                       {pod.name}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-900">
                       {pod.namespace}
                     </td>
                     <td className="px-4 py-3">
@@ -376,14 +376,14 @@ export default function NodesPage() {
                         {pod.status || "unknown"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-900">
                       {pod.nodeName || "unknown"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="w-full">
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span>{(pod.cpu || 0).toFixed(0)}m</span>
-                          <span className="text-gray-500">
+                          <span className="text-gray-900">
                             {pod.cpuLimit && pod.cpuLimit > 0
                               ? Math.round((pod.cpu / pod.cpuLimit) * 100)
                               : Math.round(((pod.cpu || 0) / 4000) * 100)}
@@ -411,7 +411,7 @@ export default function NodesPage() {
                           <span>
                             {((pod.memory || 0) / (1024 * 1024)).toFixed(0)}Mi
                           </span>
-                          <span className="text-gray-500">
+                          <span className="text-gray-900">
                             {pod.memoryLimit && pod.memoryLimit > 0
                               ? Math.round((pod.memory / pod.memoryLimit) * 100)
                               : Math.round(

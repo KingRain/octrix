@@ -310,7 +310,7 @@ export default function HealingPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-background min-h-screen">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Auto-Healing</h1>

@@ -108,7 +108,7 @@ const columns: ColumnDef<Service>[] = [
 
 export default function ServicesPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Services</h1>
         <p className="text-sm text-muted-foreground">
