@@ -578,7 +578,7 @@ export class PrometheusService {
 
   private getMockNodeMetrics(): NodeMetrics[] {
     const nodes = [
-      { name: "octrix-control-plane", cores: 4, memGB: 8, uptime: 1555200 },
+      { name: "octrix-control-plane", cores: 6, memGB: 8, uptime: 1555200 },
       { name: "octrix-worker-01", cores: 8, memGB: 16, uptime: 864000 },
       { name: "octrix-worker-02", cores: 8, memGB: 16, uptime: 432000 }
     ];

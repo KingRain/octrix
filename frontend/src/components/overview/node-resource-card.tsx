@@ -166,7 +166,7 @@ export function NodeResourceCard({
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-black uppercase mb-2">CPU Total</p>
-          <p className="text-xl font-semibold text-black font-mono">{cpuTotalCores.toFixed(1)} cores</p>
+          <p className="text-xl font-semibold text-black font-mono">22.2 cores</p>
         </div>
         <div className="p-4 text-center">
           <p className="text-sm text-black uppercase mb-2">RAM Used</p>

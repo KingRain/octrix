@@ -254,7 +254,6 @@ export default function SimulatorPage() {
     error,
     refetch,
     startSimulation,
-    stopSimulation,
     cancelSimulation,
   } = useSimulator();
   const { overview } = useOverview();
@@ -293,9 +292,6 @@ export default function SimulatorPage() {
     }
   };
 
-  const handleStopSimulation = async (runId: string) => {
-    await stopSimulation(runId);
-  };
 
   if (isLoading) {
     return (
@@ -355,14 +351,6 @@ export default function SimulatorPage() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleStopSimulation(run.id)}
-                >
-                  <Square className="mr-2 h-4 w-4" />
-                  Stop
-                </Button>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">

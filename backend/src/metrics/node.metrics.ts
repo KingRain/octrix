@@ -1,6 +1,8 @@
 import { createChildLogger } from "../utils/logger.js";
 import { prometheusCollector } from "./prometheus.collector.js";
 import { kubectlTopService } from "../services/kubectl-top.service.js";
+import { kubernetesService } from "../services/kubernetes.service.js";
+import { customPodSimulator } from "../simulators/custom-pod-simulator.js";
 
 const logger = createChildLogger("node-metrics");
 
@@ -32,13 +34,21 @@ export interface NodeMetrics {
   }>;
 }
 
+interface SimulatedPodMetric {
+  name: string;
+  namespace: string;
+  nodeName: string;
+  cpuMillicores: number;
+  memoryBytes: number;
+}
+
 export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
   // First, try to get real metrics from kubectl top
   try {
     const kubectlMetrics = await collectFromKubectlTop();
     if (kubectlMetrics.length > 0) {
       logger.debug({ count: kubectlMetrics.length }, "Using kubectl top metrics");
-      return kubectlMetrics;
+      return await mergeSimulatedPods(kubectlMetrics);
     }
   } catch (error) {
     logger.warn({ error }, "kubectl top failed, falling back to prometheus");
@@ -48,7 +58,7 @@ export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
 
   if (!connected) {
     logger.debug("Using mock node metrics");
-    return getMockNodeMetrics();
+    return await mergeSimulatedPods(getMockNodeMetrics());
   }
 
   try {
@@ -109,7 +119,7 @@ export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
     processResult(memoryAvailResult, "memoryUsageBytes"); // We'll calculate used from this or use it temporarily
     processResult(uptimeResult, "uptimeSeconds");
 
-    return Array.from(nodeMap.values())
+    const nodes = Array.from(nodeMap.values())
       .filter((n) => n.nodeName && !n.nodeName.includes("192.168.49.2:9100"))
       .map((n) => {
         const totalMem = n.memoryTotalBytes || 16 * 1024 * 1024 * 1024;
@@ -139,15 +149,16 @@ export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
           },
         };
       });
+    return await mergeSimulatedPods(nodes);
   } catch (error) {
     logger.error({ error }, "Failed to collect node metrics from Prometheus");
-    return getMockNodeMetrics();
+    return await mergeSimulatedPods(getMockNodeMetrics());
   }
 }
 
 function getMockNodeMetrics(): NodeMetrics[] {
   const nodes = [
-    { name: "octrix-control-plane", cores: 4, memGB: 8, uptime: 1555200 },
+    { name: "octrix-control-plane", cores: 6, memGB: 8, uptime: 1555200 },
     { name: "octrix-worker-01", cores: 8, memGB: 16, uptime: 864000 },
     { name: "octrix-worker-02", cores: 8, memGB: 16, uptime: 432000 }
   ];
@@ -179,6 +190,119 @@ function getMockNodeMetrics(): NodeMetrics[] {
       },
     };
   });
+}
+
+function isSimulatedPod(labels: Record<string, string> | undefined): boolean {
+  if (!labels) return false;
+  return labels.simulated === "true" || labels.env === "simulation";
+}
+
+async function getSimulatedPodMetrics(): Promise<SimulatedPodMetric[]> {
+  const simulated: SimulatedPodMetric[] = [];
+  const seen = new Set<string>();
+
+  try {
+    const pods = await kubernetesService.getPods();
+    pods.forEach((pod) => {
+      if (!isSimulatedPod(pod.labels)) return;
+      const key = `${pod.namespace}/${pod.name}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      simulated.push({
+        name: pod.name,
+        namespace: pod.namespace,
+        nodeName: pod.nodeName || "octrix-sim-node",
+        cpuMillicores: Math.max(0, Math.round(pod.cpuUsage || 0)),
+        memoryBytes: Math.max(0, pod.memoryUsage || 0),
+      });
+    });
+  } catch (error) {
+    logger.warn({ error }, "Failed to load simulated pods from Kubernetes API");
+  }
+
+  const customPods = customPodSimulator.getMetrics();
+  customPods.forEach((pod) => {
+    const key = `${pod.namespace}/${pod.podName}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    simulated.push({
+      name: pod.podName,
+      namespace: pod.namespace,
+      nodeName: pod.nodeName || "octrix-sim-node",
+      cpuMillicores: Math.max(0, Math.round((pod.cpuUsageCores || 0) * 1000)),
+      memoryBytes: Math.max(0, pod.memoryUsageBytes || 0),
+    });
+  });
+
+  return simulated;
+}
+
+async function mergeSimulatedPods(nodes: NodeMetrics[]): Promise<NodeMetrics[]> {
+  const simulatedPods = await getSimulatedPodMetrics();
+  if (simulatedPods.length === 0) {
+    return nodes;
+  }
+
+  const podsByNode = new Map<string, SimulatedPodMetric[]>();
+  simulatedPods.forEach((pod) => {
+    const list = podsByNode.get(pod.nodeName) || [];
+    list.push(pod);
+    podsByNode.set(pod.nodeName, list);
+  });
+
+  const nodeMap = new Map<string, NodeMetrics>();
+  nodes.forEach((node) => {
+    nodeMap.set(node.nodeName, { ...node });
+  });
+
+  podsByNode.forEach((pods, nodeName) => {
+    const existing = nodeMap.get(nodeName);
+    const existingMetrics = existing?.podMetrics ? [...existing.podMetrics] : [];
+    const existingKeys = new Set(
+      existingMetrics.map((p) => `${p.namespace}/${p.name}`),
+    );
+    const newMetrics = pods
+      .filter((p) => !existingKeys.has(`${p.namespace}/${p.name}`))
+      .map((p) => ({
+        name: p.name,
+        namespace: p.namespace,
+        cpuMillicores: p.cpuMillicores,
+        memoryBytes: p.memoryBytes,
+      }));
+
+    if (existing) {
+      existing.podMetrics = [...existingMetrics, ...newMetrics];
+      existing.podCount = (existing.podCount || 0) + newMetrics.length;
+      nodeMap.set(nodeName, existing);
+      return;
+    }
+
+    nodeMap.set(nodeName, {
+      nodeName,
+      cpuUsagePercent: 0,
+      cpuUsedCores: 0,
+      cpuTotalCores: 0,
+      memoryUsagePercent: 0,
+      memoryUsageBytes: 0,
+      memoryTotalBytes: 0,
+      diskUsagePercent: 0,
+      networkReceiveBytesRate: 0,
+      networkTransmitBytesRate: 0,
+      podCount: newMetrics.length,
+      uptimeSeconds: 0,
+      conditions: {
+        ready: true,
+        memoryPressure: false,
+        diskPressure: false,
+        pidPressure: false,
+      },
+      podMetrics: newMetrics,
+    });
+  });
+
+  return Array.from(nodeMap.values());
 }
 
 /**
