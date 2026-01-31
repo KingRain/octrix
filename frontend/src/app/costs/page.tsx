@@ -344,6 +344,48 @@ export default function CostsPage() {
         </div>
       )}
 
+      {/* Minicube Node Stats */}
+      {minicubeNode && (
+        <div className="bg-white rounded-xl border border-blue-200 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Server className="h-4 w-4 text-purple-400" />
+            <h2 className="text-sm font-medium text-gray-900">Minicube Node Stats</h2>
+            <span className="text-xs text-gray-500 ml-2">
+              Primary cluster node
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">CPU Usage</p>
+              <p className="text-2xl font-semibold text-foreground">
+                {minicubeNode.cpuUsagePercent.toFixed(1)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {minicubeNode.cpuUsedCores.toFixed(3)} / {minicubeNode.cpuTotalCores.toFixed(1)} cores
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">Memory Usage</p>
+              <p className="text-2xl font-semibold text-foreground">
+                {minicubeNode.memoryUsagePercent.toFixed(0)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {(minicubeNode.memoryUsageBytes / (1024 * 1024 * 1024)).toFixed(1)} GB / {(minicubeNode.memoryTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">Pods on Node</p>
+              <p className="text-2xl font-semibold text-foreground">
+                {minicubeNode.podCount}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total pods running on minicube
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Metrics Cards */}
       <div className="grid gap-4 grid-cols-4">
         <Card className="bg-card border-border">
