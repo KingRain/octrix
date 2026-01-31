@@ -126,9 +126,18 @@ export function TrianglePod({
             </p>
           </div>
           <div className="px-3 py-2 space-y-1.5">
+            {cpu === 0 && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 mb-1">
+                <span className="text-base"></span>
+                <span className="italic">Sleeping pod (idle)</span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-4 text-xs">
               <span className="text-muted-foreground">CPU</span>
-              <span className="text-primary font-mono font-medium">
+              <span className={cn(
+                "font-mono font-medium",
+                cpu === 0 ? "text-muted-foreground" : "text-primary"
+              )}>
                 {cpu.toFixed(1)}m
               </span>
             </div>
