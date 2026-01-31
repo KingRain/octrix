@@ -20,9 +20,6 @@ export function NeedleBarGauge({ value, label }: GaugeProps) {
       <Gauge
         value={displayValue}
       />
-      <p className="text-sm font-bold" style={{ color, marginTop: '4px' }}>
-        {displayValue.toFixed(1)}%
-      </p>
     </div>
   );
 }

@@ -123,7 +123,7 @@ export default function OverviewPage() {
   const showLoading = isLoading && !hasReceivedDataRef.current;
 
   return (
-    <div className="space-y-6 min-h-screen bg-gray-100 p-6">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <OOMAlertPopup
         alerts={oomWarnings}
         onDismiss={(podName) => {
@@ -131,7 +131,7 @@ export default function OverviewPage() {
         }}
       />
 
-      <div className="flex items-center justify-between bg-gray-200 p-4 rounded-lg">
+      <div className="flex items-center justify-between bg-white p-4 rounded-lg">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Overview</h1>
           <p className="text-sm text-gray-600">
@@ -139,16 +139,6 @@ export default function OverviewPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-[#1a1a1a] border border-gray-700">
-            <Shield className={`h-4 w-4 ${healerEnabled ? "text-green-500" : "text-gray-500"}`} />
-            <span className="text-xs text-gray-300">Auto-Healer</span>
-            <Switch
-              checked={healerEnabled}
-              onCheckedChange={toggleHealer}
-              disabled={healerLoading}
-              className="data-[state=checked]:bg-green-600"
-            />
-          </div>
           <div className="h-6 w-px bg-gray-700" />
           <div className="flex items-center gap-6 text-xs">
             <div className="flex items-center gap-2">

@@ -132,7 +132,7 @@ export function ServiceTriangle({
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className="relative flex flex-col items-center cursor-pointer group"
+            className="relative flex flex-col items-center cursor-pointer group bg-white"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -154,7 +154,7 @@ export function ServiceTriangle({
                   style={{
                     fill: isHovered
                       ? "rgba(59, 130, 246, 0.08)"
-                      : "rgba(30, 30, 30, 0.5)",
+                      : "rgba(31, 41, 55, 0.15)",
                     stroke: isHovered ? "#3b82f6" : "#374151",
                     strokeWidth: isHovered ? 1.5 : 1,
                   }}

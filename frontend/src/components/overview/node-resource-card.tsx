@@ -143,15 +143,6 @@ export function NodeResourceCard({
         </div>
       )}
 
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
-        <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-        <h3 className="text-base font-medium text-foreground">~ {nodeName}</h3>
-        {podMetrics && podMetrics.length > 0 && (
-          <span className="ml-auto text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
-            Hover for pod details
-          </span>
-        )}
-      </div>
 
       <div className="grid grid-cols-3 divide-x divide-border">
         <div className="p-6 flex items-center justify-center">
@@ -163,30 +154,30 @@ export function NodeResourceCard({
         </div>
 
         <div className="p-6 flex flex-col items-center justify-center">
-          <p className="text-sm text-muted-foreground mb-2">Pods on node</p>
+          <p className="text-sm text-gray-900 mb-2">Pods on node</p>
           <p className="text-6xl font-bold text-gray-900 font-mono">{podCount}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-5 divide-x divide-border border-t border-border">
         <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground uppercase mb-2">CPU Used</p>
-          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuUsedCores.toFixed(3)}</p>
+          <p className="text-sm text-gray-900 uppercase mb-2">CPU Used</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuUsedCores.toFixed(3)} cores</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground uppercase mb-2">CPU Total</p>
-          <p className="text-xl font-semibold text-foreground font-mono">{cpuTotalCores.toFixed(1)}</p>
+          <p className="text-sm text-gray-900 uppercase mb-2">CPU Total</p>
+          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuTotalCores.toFixed(1)} cores</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground uppercase mb-2">RAM Used</p>
+          <p className="text-sm text-gray-900 uppercase mb-2">RAM Used</p>
           <p className="text-xl font-semibold text-gray-900 font-mono">{formatBytes(memoryUsageBytes)}</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground uppercase mb-2">RAM Total</p>
+          <p className="text-sm text-gray-900 uppercase mb-2">RAM Total</p>
           <p className="text-xl font-semibold text-gray-900 font-mono">{formatBytes(memoryTotalBytes)}</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground uppercase mb-2">Uptime</p>
+          <p className="text-sm text-gray-900 uppercase mb-2">Uptime</p>
           <p className="text-xl font-semibold text-gray-900 font-mono">{formatUptime(uptimeSeconds)}</p>
         </div>
       </div>
