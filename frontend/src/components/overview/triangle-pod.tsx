@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import type { PVCInfo } from "@/types/overview";
 import {
   Tooltip,
   TooltipContent,
@@ -8,7 +9,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type PodHealth = "healthy" | "healing" | "failed" | "pending" | "unknown" | "disconnected";
+export type PodHealth =
+  | "healthy"
+  | "healing"
+  | "failed"
+  | "pending"
+  | "unknown"
+  | "disconnected";
 
 interface TrianglePodProps {
   name: string;
@@ -16,6 +23,10 @@ interface TrianglePodProps {
   cpu: number;
   memory: number;
   restarts: number;
+  pvcHealth?: "healthy" | "warning" | "critical" | "none";
+  pvcs?: PVCInfo[];
+  timeToOomSeconds?: number;
+  memoryGrowthRateBytesPerSecond?: number;
   size?: number;
   showTooltip?: boolean;
 }
@@ -44,12 +55,16 @@ export function TrianglePod({
   cpu,
   memory,
   restarts,
+  pvcHealth,
+  pvcs,
+  timeToOomSeconds,
+  memoryGrowthRateBytesPerSecond,
   size = 20,
   showTooltip = true,
 }: TrianglePodProps) {
   const colors = healthColors[health];
   const height = size * 0.866;
-  
+
   const triangle = (
     <svg
       width={size}
@@ -58,7 +73,7 @@ export function TrianglePod({
       className={cn(
         "transition-all duration-200",
         health === "healing" && "animate-pulse",
-        health !== "disconnected" && "hover:brightness-125 hover:scale-110"
+        health !== "disconnected" && "hover:brightness-125 hover:scale-110",
       )}
     >
       <polygon
@@ -68,6 +83,20 @@ export function TrianglePod({
         strokeWidth="2"
         className="transition-colors"
       />
+      {(pvcHealth === "critical" ||
+        (timeToOomSeconds !== undefined && timeToOomSeconds < 300)) && (
+        <circle
+          cx="50"
+          cy="55"
+          r="15"
+          fill="#ef4444"
+          className="animate-ping"
+        />
+      )}
+      {(pvcHealth === "warning" ||
+        (timeToOomSeconds !== undefined && timeToOomSeconds < 3600)) && (
+        <circle cx="50" cy="55" r="10" fill="#fbbf24" />
+      )}
     </svg>
   );
 
@@ -89,22 +118,97 @@ export function TrianglePod({
           className="bg-[#1a1a1a] border border-gray-600 rounded-lg shadow-2xl p-0 overflow-hidden"
         >
           <div className="px-3 py-2 border-b border-gray-700 bg-[#222]">
-            <p className="font-semibold text-sm text-white truncate max-w-[200px]">{name}</p>
-            <p className={cn("text-xs font-medium", statusInfo.color)}>{statusInfo.label}</p>
+            <p className="font-semibold text-sm text-white truncate max-w-[200px]">
+              {name}
+            </p>
+            <p className={cn("text-xs font-medium", statusInfo.color)}>
+              {statusInfo.label}
+            </p>
           </div>
           <div className="px-3 py-2 space-y-1.5">
             <div className="flex items-center justify-between gap-4 text-xs">
               <span className="text-gray-400">CPU</span>
-              <span className="text-cyan-400 font-mono font-medium">{cpu.toFixed(1)}m</span>
+              <span className="text-cyan-400 font-mono font-medium">
+                {cpu.toFixed(1)}m
+              </span>
             </div>
             <div className="flex items-center justify-between gap-4 text-xs">
               <span className="text-gray-400">Memory</span>
-              <span className="text-purple-400 font-mono font-medium">{(memory / 1024 / 1024).toFixed(0)}Mi</span>
+              <span className="text-purple-400 font-mono font-medium">
+                {(memory / 1024 / 1024).toFixed(0)}Mi
+              </span>
             </div>
             <div className="flex items-center justify-between gap-4 text-xs">
               <span className="text-gray-400">Restarts</span>
-              <span className={cn("font-mono font-medium", restarts > 0 ? "text-orange-400" : "text-gray-300")}>{restarts}</span>
+              <span
+                className={cn(
+                  "font-mono font-medium",
+                  restarts > 0 ? "text-orange-400" : "text-gray-300",
+                )}
+              >
+                {restarts}
+              </span>
             </div>
+
+            {timeToOomSeconds !== undefined && timeToOomSeconds < 3600 && (
+              <div className="flex items-center justify-between gap-4 text-xs font-medium text-red-400 animate-pulse">
+                <span>OOM Risk</span>
+                <span>
+                  In {Math.floor(timeToOomSeconds / 60)}m{" "}
+                  {Math.floor(timeToOomSeconds % 60)}s
+                </span>
+              </div>
+            )}
+
+            {pvcs && pvcs.length > 0 && (
+              <>
+                <div className="h-px bg-gray-700/50 my-1" />
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                    Volumes
+                  </p>
+                  {pvcs.map((pvc, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between gap-3 text-[10px]"
+                    >
+                      <span className="text-gray-400 truncate max-w-[100px]">
+                        {pvc.name}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              pvc.health === "critical"
+                                ? "bg-red-500"
+                                : pvc.health === "warning"
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500",
+                            )}
+                            style={{
+                              width: `${Math.min(100, pvc.usagePercent)}%`,
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={cn(
+                            "font-mono font-medium min-w-[24px] text-right",
+                            pvc.health === "critical"
+                              ? "text-red-400"
+                              : pvc.health === "warning"
+                                ? "text-yellow-400"
+                                : "text-green-400",
+                          )}
+                        >
+                          {Math.round(pvc.usagePercent)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>

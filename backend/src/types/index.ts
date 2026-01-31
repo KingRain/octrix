@@ -66,6 +66,14 @@ export interface Pod {
   annotations: Record<string, string>;
   ownerReferences: OwnerReference[];
   ip: string;
+  volumes: PodVolume[];
+}
+
+export interface PodVolume {
+  name: string;
+  persistentVolumeClaim?: {
+    claimName: string;
+  };
 }
 
 export type PodStatus = "running" | "pending" | "succeeded" | "failed" | "unknown";
@@ -291,10 +299,26 @@ export interface ServiceGroup {
 export interface PodInfo {
   id: string;
   name: string;
+  nodeName: string;
   status: "healthy" | "healing" | "failed" | "pending" | "unknown";
   cpu: number;
   memory: number;
   restarts: number;
+  pvcHealth?: "healthy" | "warning" | "critical" | "none";
+  pvcs?: PVCInfo[];
+  timeToOomSeconds?: number;
+  memoryGrowthRateBytesPerSecond?: number;
+  cpuLimit?: number;
+  memoryLimit?: number;
+}
+
+export interface PVCInfo {
+  name: string;
+  status: string;
+  capacityBytes: number;
+  usedBytes: number;
+  usagePercent: number;
+  health: "healthy" | "warning" | "critical";
 }
 
 export interface ClusterOverview {

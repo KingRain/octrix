@@ -1,10 +1,26 @@
 export interface PodInfo {
   id: string;
   name: string;
+  nodeName: string;
   status: "healthy" | "healing" | "failed" | "pending" | "unknown";
   cpu: number;
   memory: number;
   restarts: number;
+  pvcHealth?: "healthy" | "warning" | "critical" | "none";
+  pvcs?: PVCInfo[];
+  timeToOomSeconds?: number;
+  memoryGrowthRateBytesPerSecond?: number;
+  cpuLimit?: number;
+  memoryLimit?: number;
+}
+
+export interface PVCInfo {
+  name: string;
+  status: string;
+  capacityBytes: number;
+  usedBytes: number;
+  usagePercent: number;
+  health: "healthy" | "warning" | "critical";
 }
 
 export interface ServiceGroup {

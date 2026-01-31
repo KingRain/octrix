@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 interface NodeMetrics {
   nodeName: string;
@@ -26,10 +27,23 @@ interface PodInfo {
   name: string;
   namespace: string;
   nodeName: string;
-  status: string;
+  status: "healthy" | "healing" | "failed" | "pending" | "running" | "unknown";
   cpu: number;
   memory: number;
   restarts: number;
+  pvcHealth?: "healthy" | "warning" | "critical" | "none";
+  pvcs?: PVCInfo[];
+  cpuLimit?: number;
+  memoryLimit?: number;
+}
+
+interface PVCInfo {
+  name: string;
+  status: string;
+  capacityBytes: number;
+  usedBytes: number;
+  usagePercent: number;
+  health: "healthy" | "warning" | "critical";
 }
 
 function formatUptime(seconds: number): string {
@@ -44,7 +58,7 @@ function formatUptime(seconds: number): string {
 function ProgressBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-      <div 
+      <div
         className={cn("h-full rounded-full transition-all duration-500", color)}
         style={{ width: `${Math.min(value, 100)}%` }}
       />
@@ -70,25 +84,26 @@ export default function NodesPage() {
         fetch(`${BACKEND_URL}/api/v1/overview/nodes`),
         fetch(`${BACKEND_URL}/api/v1/overview`),
       ]);
-      
+
       const nodesData = await nodesRes.json();
       const overviewData = await overviewRes.json();
-      
+
       if (nodesData.success && nodesData.data) {
         setNodes(nodesData.data);
       }
-      
+
       if (overviewData.success && overviewData.data?.services) {
         const allPods: PodInfo[] = [];
-        overviewData.data.services.forEach((service: { pods: PodInfo[]; namespace: string }) => {
-          service.pods.forEach((pod: PodInfo) => {
-            allPods.push({
-              ...pod,
-              namespace: service.namespace || "default",
-              nodeName: nodes.length > 0 ? nodes[Math.floor(Math.random() * nodes.length)].nodeName : "minikube",
+        overviewData.data.services.forEach(
+          (service: { pods: PodInfo[]; namespace: string }) => {
+            service.pods.forEach((pod: PodInfo) => {
+              allPods.push({
+                ...pod,
+                namespace: service.namespace || "default",
+              });
             });
-          });
-        });
+          },
+        );
         setPods(allPods);
       }
     } catch (error) {
@@ -101,9 +116,12 @@ export default function NodesPage() {
   const handleRestartAll = async () => {
     setIsRestarting(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/v1/cluster/pods/restart-all`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v1/cluster/pods/restart-all`,
+        {
+          method: "POST",
+        },
+      );
       const data = await response.json();
       if (data.success) {
         // Refresh the page after a short delay
@@ -136,7 +154,8 @@ export default function NodesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Nodes</h1>
           <p className="text-sm text-muted-foreground">
-            The base Kubernetes Node resource represents a virtual or physical machine which hosts deployments.
+            The base Kubernetes Node resource represents a virtual or physical
+            machine which hosts deployments.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -169,25 +188,45 @@ export default function NodesPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-800 text-left">
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">State</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Roles</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Version</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">External/Internal IP</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">OS</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-32">CPU</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-32">RAM</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Pods</th>
-                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Age</th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  State
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  Roles
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  Version
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  External/Internal IP
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  OS
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-32">
+                  CPU
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider w-32">
+                  RAM
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  Pods
+                </th>
+                <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  Age
+                </th>
               </tr>
             </thead>
             <tbody>
               {nodes.map((node, idx) => (
-                <tr 
-                  key={node.nodeName} 
+                <tr
+                  key={node.nodeName}
                   className={cn(
                     "border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors",
-                    idx % 2 === 0 ? "bg-[#0d1117]" : "bg-[#161b22]"
+                    idx % 2 === 0 ? "bg-[#0d1117]" : "bg-[#161b22]",
                   )}
                 >
                   <td className="px-4 py-3">
@@ -212,25 +251,27 @@ export default function NodesPage() {
                       <Copy className="h-3 w-3 text-gray-500 cursor-pointer hover:text-gray-300" />
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">
-                    Linux
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-400">Linux</td>
                   <td className="px-4 py-3">
                     <div className="space-y-1">
-                      <ProgressBar 
-                        value={node.cpuUsagePercent} 
-                        color={getProgressColor(node.cpuUsagePercent)} 
+                      <ProgressBar
+                        value={node.cpuUsagePercent}
+                        color={getProgressColor(node.cpuUsagePercent)}
                       />
-                      <span className="text-xs text-gray-400">{node.cpuUsagePercent.toFixed(1)}%</span>
+                      <span className="text-xs text-gray-400">
+                        {node.cpuUsagePercent.toFixed(1)}%
+                      </span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="space-y-1">
-                      <ProgressBar 
-                        value={node.memoryUsagePercent} 
-                        color={getProgressColor(node.memoryUsagePercent)} 
+                      <ProgressBar
+                        value={node.memoryUsagePercent}
+                        color={getProgressColor(node.memoryUsagePercent)}
                       />
-                      <span className="text-xs text-gray-400">{node.memoryUsagePercent.toFixed(0)}%</span>
+                      <span className="text-xs text-gray-400">
+                        {node.memoryUsagePercent.toFixed(0)}%
+                      </span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-300">
@@ -253,50 +294,93 @@ export default function NodesPage() {
             <h2 className="text-lg font-medium">Pods ({pods.length})</h2>
           </div>
         </div>
-        
+
         <div className="bg-[#0d1117] rounded-lg border border-gray-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800 text-left">
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Namespace</th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Node</th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">CPU</th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Memory</th>
-                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Restarts</th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Namespace
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Node
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    CPU
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Memory
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Storage
+                  </th>
+                  <th className="px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Restarts
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {pods.map((pod) => (
-                  <tr key={pod.id} className="border-b border-gray-800/30 hover:bg-gray-800/20">
-                    <td className="px-4 py-3 text-sm font-mono text-cyan-400">{pod.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-400">{pod.namespace}</td>
+                  <tr
+                    key={pod.id}
+                    className="border-b border-gray-800/30 hover:bg-gray-800/20"
+                  >
+                    <td className="px-4 py-3 text-sm font-mono text-cyan-400">
+                      {pod.name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-400">
+                      {pod.namespace}
+                    </td>
                     <td className="px-4 py-3">
-                      <Badge 
+                      <Badge
                         className={cn(
                           "text-xs",
-                          pod.status === "healthy" && "bg-green-500/20 text-green-400",
-                          pod.status === "healing" && "bg-yellow-500/20 text-yellow-400",
-                          pod.status === "failed" && "bg-red-500/20 text-red-400",
-                          pod.status === "pending" && "bg-blue-500/20 text-blue-400"
+                          (pod.status === "healthy" ||
+                            pod.status === "running") &&
+                            "bg-green-500/20 text-green-400",
+                          pod.status === "healing" &&
+                            "bg-yellow-500/20 text-yellow-400",
+                          pod.status === "failed" &&
+                            "bg-red-500/20 text-red-400",
+                          pod.status === "pending" &&
+                            "bg-blue-500/20 text-blue-400",
                         )}
                       >
-                        {pod.status}
+                        {pod.status || "unknown"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">{pod.nodeName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-400">
+                      {pod.nodeName || "unknown"}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="w-full">
                         <div className="flex items-center justify-between text-xs mb-1">
-                          <span>{pod.cpu}m</span>
-                          <span className="text-gray-500">{Math.round(pod.cpu / 40)}%</span>
+                          <span>{(pod.cpu || 0).toFixed(0)}m</span>
+                          <span className="text-gray-500">
+                            {pod.cpuLimit && pod.cpuLimit > 0
+                              ? Math.round((pod.cpu / pod.cpuLimit) * 100)
+                              : Math.round(((pod.cpu || 0) / 4000) * 100)}
+                            %
+                          </span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
                             className="h-full rounded-full bg-blue-500"
-                            style={{ width: `${Math.min(100, Math.round((pod.cpu / 40) * 100))}%` }}
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                pod.cpuLimit && pod.cpuLimit > 0
+                                  ? Math.round((pod.cpu / pod.cpuLimit) * 100)
+                                  : Math.round(((pod.cpu || 0) / 4000) * 100),
+                              )}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -304,23 +388,78 @@ export default function NodesPage() {
                     <td className="px-4 py-3">
                       <div className="w-full">
                         <div className="flex items-center justify-between text-xs mb-1">
-                          <span>{(pod.memory / 1024 / 1024).toFixed(0)}Mi</span>
-                          <span className="text-gray-500">{Math.round(pod.memory / 8192)}%</span>
+                          <span>
+                            {((pod.memory || 0) / (1024 * 1024)).toFixed(0)}Mi
+                          </span>
+                          <span className="text-gray-500">
+                            {pod.memoryLimit && pod.memoryLimit > 0
+                              ? Math.round((pod.memory / pod.memoryLimit) * 100)
+                              : Math.round(
+                                  ((pod.memory || 0) /
+                                    (8 * 1024 * 1024 * 1024)) *
+                                    100,
+                                )}
+                            %
+                          </span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
                             className="h-full rounded-full bg-purple-500"
-                            style={{ width: `${Math.min(100, Math.round((pod.memory / 8192) * 100))}%` }}
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                pod.memoryLimit && pod.memoryLimit > 0
+                                  ? Math.round(
+                                      (pod.memory / pod.memoryLimit) * 100,
+                                    )
+                                  : Math.round(
+                                      ((pod.memory || 0) /
+                                        (8 * 1024 * 1024 * 1024)) *
+                                        100,
+                                    ),
+                              )}%`,
+                            }}
                           />
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">{pod.restarts}</td>
+                    <td className="px-4 py-3">
+                      {pod.pvcHealth && pod.pvcHealth !== "none" ? (
+                        <div className="space-y-1">
+                          <Badge
+                            className={cn(
+                              "text-[10px] px-1.5 py-0 min-h-0 h-5 border",
+                              pod.pvcHealth === "healthy" &&
+                                "bg-green-500/10 text-green-400 border-green-500/30",
+                              pod.pvcHealth === "warning" &&
+                                "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+                              pod.pvcHealth === "critical" &&
+                                "bg-red-500/10 text-red-400 border-red-500/30",
+                            )}
+                          >
+                            {pod.pvcs?.[0]?.usagePercent.toFixed(0)}% Used
+                          </Badge>
+                          {pod.pvcs && pod.pvcs.length > 1 && (
+                            <div className="text-[10px] text-gray-500">
+                              +{pod.pvcs.length - 1} more
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-600">No PVC</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-400">
+                      {pod.restarts}
+                    </td>
                   </tr>
                 ))}
                 {pods.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                    <td
+                      colSpan={7}
+                      className="px-4 py-8 text-center text-sm text-gray-500"
+                    >
                       No pods found
                     </td>
                   </tr>
