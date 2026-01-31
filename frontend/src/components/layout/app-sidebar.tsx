@@ -117,7 +117,7 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.href}
                     className={cn(
-                      "w-full justify-start gap-4 px-5 py-4",
+                      "w-full justify-start gap-4 px-6 py-5",
                       pathname === item.href &&
                         "bg-accent text-accent-foreground",
                     )}
