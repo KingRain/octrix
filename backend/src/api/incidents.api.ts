@@ -37,6 +37,16 @@ router.get("/:id/summary", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/:id/logs", async (req: Request, res: Response) => {
+  try {
+    const logs = await incidentSummaryService.getIncidentLogs(req.params.id);
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    logger.error({ error }, "Failed to get incident logs");
+    res.status(500).json({ success: false, message: "Failed to get incident logs" });
+  }
+});
+
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const incident = incidentDetector.getIncident(req.params.id);

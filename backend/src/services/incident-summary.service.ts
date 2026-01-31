@@ -15,6 +15,18 @@ export interface IncidentSummary {
   generatedAt: string;
 }
 
+export interface IncidentCommandOutput {
+  label: string;
+  command: string;
+  output: string;
+  updatedAt: string;
+}
+
+export interface IncidentLogs {
+  incidentId: string;
+  commands: IncidentCommandOutput[];
+}
+
 export interface IncidentContext {
   incident: {
     id: string;
@@ -67,6 +79,23 @@ export interface IncidentContext {
 }
 
 export class IncidentSummaryService {
+  async getIncidentLogs(incidentId: string): Promise<IncidentLogs> {
+    logger.info({ incidentId }, "Collecting incident logs");
+
+    try {
+      const context = await this.collectIncidentContext(incidentId);
+      const commands = await this.buildCommandOutputs(context);
+
+      return {
+        incidentId,
+        commands,
+      };
+    } catch (error) {
+      logger.error({ error, incidentId }, "Failed to collect incident logs");
+      throw new Error("Failed to collect incident logs");
+    }
+  }
+
   async generateSummary(incidentId: string): Promise<IncidentSummary> {
     logger.info({ incidentId }, "Generating incident summary");
 
@@ -104,6 +133,160 @@ export class IncidentSummaryService {
       prometheusMetrics,
       relatedPods,
     };
+  }
+
+  private async buildCommandOutputs(context: IncidentContext): Promise<IncidentCommandOutput[]> {
+    const updatedAt = new Date().toISOString();
+    const commands: IncidentCommandOutput[] = [];
+
+    if (context.podLogs.length > 0) {
+      context.podLogs.forEach((log) => {
+        commands.push({
+          label: "kubectl logs",
+          command: `kubectl logs pod/${log.podName} -n ${context.incident.namespace} --tail=50`,
+          output: log.logs || "No logs available.",
+          updatedAt,
+        });
+      });
+    } else {
+      commands.push({
+        label: "kubectl logs",
+        command: `kubectl logs pod/${context.incident.resource} -n ${context.incident.namespace} --tail=50`,
+        output: "No logs available for this incident.",
+        updatedAt,
+      });
+    }
+
+    commands.push({
+      label: "kubectl describe",
+      command: `kubectl describe ${context.incident.resourceType}/${context.incident.resource} -n ${context.incident.namespace}`,
+      output: await this.getDescribeOutput(context),
+      updatedAt,
+    });
+
+    commands.push({
+      label: "kubectl get events",
+      command: `kubectl get events -n ${context.incident.namespace} --sort-by=.lastTimestamp`,
+      output: this.formatEventsOutput(context.kubernetesEvents),
+      updatedAt,
+    });
+
+    commands.push({
+      label: "kubectl get pods",
+      command: `kubectl get pods -n ${context.incident.namespace}`,
+      output: this.formatPodsOutput(context.relatedPods),
+      updatedAt,
+    });
+
+    commands.push({
+      label: "prometheus metrics",
+      command: `prometheus: incident metrics for ${context.incident.resource}`,
+      output: this.formatMetricsOutput(context.prometheusMetrics),
+      updatedAt,
+    });
+
+    return commands;
+  }
+
+  private formatEventsOutput(events: IncidentContext["kubernetesEvents"]): string {
+    if (!events.length) {
+      return "No events found in namespace.";
+    }
+
+    const header = "LAST SEEN\tTYPE\tREASON\tOBJECT\tMESSAGE";
+    const rows = events.slice(0, 30).map((event) => {
+      const ts = new Date(event.timestamp).toLocaleString();
+      const obj = event.involvedObject ? `${event.involvedObject.kind}/${event.involvedObject.name}` : "-";
+      const message = event.message.replace(/\s+/g, " ").trim();
+      return `${ts}\t${event.type}\t${event.reason}\t${obj}\t${message}`;
+    });
+
+    return [header, ...rows].join("\n");
+  }
+
+  private formatPodsOutput(pods: IncidentContext["relatedPods"]): string {
+    if (!pods.length) {
+      return "No related pods found.";
+    }
+
+    const header = "NAME\tSTATUS\tRESTARTS\tCPU(cores)\tMEMORY(MB)";
+    const rows = pods.map((pod) => {
+      const memoryMb = pod.memoryUsage ? (pod.memoryUsage / (1024 * 1024)).toFixed(2) : "0.00";
+      return `${pod.name}\t${pod.status}\t${pod.restartCount}\t${pod.cpuUsage.toFixed(2)}\t${memoryMb}`;
+    });
+
+    return [header, ...rows].join("\n");
+  }
+
+  private formatMetricsOutput(metrics: IncidentContext["prometheusMetrics"]): string {
+    if (!metrics.length) {
+      return "No Prometheus metrics available.";
+    }
+
+    return metrics
+      .map((metric) => `${metric.name}: ${metric.value.toFixed(2)} (${metric.description})`)
+      .join("\n");
+  }
+
+  private async getDescribeOutput(context: IncidentContext): Promise<string> {
+    if (context.incident.resourceType !== "pod") {
+      return `Describe output for ${context.incident.resourceType} resources is not available.`;
+    }
+
+    try {
+      const pods = await kubernetesService.getPods(context.incident.namespace);
+      const targetPod = pods.find((pod) => pod.name === context.incident.resource)
+        || pods.find((pod) => pod.name.includes(context.incident.resource.split("-")[0]));
+      const podState = context.podStates.find((pod) => pod.name === targetPod?.name);
+
+      if (!targetPod) {
+        return "Pod not found in namespace.";
+      }
+
+      const labels = Object.entries(targetPod.labels || {}).map(([key, value]) => `${key}=${value}`).join(", ") || "<none>";
+      const annotations = Object.entries(targetPod.annotations || {}).map(([key, value]) => `${key}=${value}`).join(", ") || "<none>";
+      const owners = (targetPod.ownerReferences || []).map((o) => `${o.kind}/${o.name}`).join(", ") || "<none>";
+
+      const lines: string[] = [
+        `Name:\t${targetPod.name}`,
+        `Namespace:\t${targetPod.namespace}`,
+        `Node:\t${targetPod.nodeName || "unknown"}`,
+        `Status:\t${targetPod.status}`,
+        `Phase:\t${targetPod.phase}`,
+        `IP:\t${targetPod.ip || "unknown"}`,
+        `Restarts:\t${targetPod.restarts}`,
+        `Start Time:\t${targetPod.createdAt || "unknown"}`,
+        `Labels:\t${labels}`,
+        `Annotations:\t${annotations}`,
+        `Owner References:\t${owners}`,
+        "",
+        "Containers:",
+      ];
+
+      targetPod.containers.forEach((container) => {
+        lines.push(
+          `  ${container.name}:`,
+          `    Image:\t${container.image}`,
+          `    State:\t${container.status}`,
+          `    Ready:\t${container.ready}`,
+          `    Restarts:\t${container.restartCount}`
+        );
+      });
+
+      if (podState) {
+        lines.push(
+          "",
+          `Container State:\t${podState.containerState}`,
+          podState.stateReason ? `State Reason:\t${podState.stateReason}` : "",
+          podState.stateMessage ? `State Message:\t${podState.stateMessage}` : ""
+        );
+      }
+
+      return lines.filter(Boolean).join("\n");
+    } catch (error) {
+      logger.error({ error }, "Failed to build describe output");
+      return "Failed to fetch pod details.";
+    }
   }
 
   private async getIncidentData(incidentId: string) {
@@ -428,7 +611,7 @@ INCIDENT DETAILS:
 INSTRUCTIONS:
 1. Identify the root suspect pod/resource and its state (e.g., CrashLoopBackOff, OOMKilled)
 2. Determine the impact on other pods (look for connection errors, failures in logs)
-3. List 3-5 specific signals from the logs and events
+3. List 3-5 specific, non-repetitive signals from the logs and events (each signal must highlight a distinct observation)
 4. Classify the incident type
 5. Count affected workloads for blast radius
 

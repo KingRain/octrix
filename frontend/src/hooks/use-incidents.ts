@@ -62,6 +62,18 @@ export interface IncidentSummary {
   generatedAt: string;
 }
 
+export interface IncidentCommandOutput {
+  label: string;
+  command: string;
+  output: string;
+  updatedAt: string;
+}
+
+export interface IncidentLogs {
+  incidentId: string;
+  commands: IncidentCommandOutput[];
+}
+
 export interface IncidentStats {
   total: number;
   open: number;
@@ -93,6 +105,7 @@ interface UseIncidentsReturn {
   resolveIncident: (id: string) => Promise<boolean>;
   clearHistory: () => Promise<boolean>;
   fetchIncidentSummary: (id: string) => Promise<IncidentSummary | null>;
+  fetchIncidentLogs: (id: string) => Promise<IncidentLogs | null>;
 }
 
 export function useIncidents(statusFilter?: IncidentStatus): UseIncidentsReturn {
@@ -209,6 +222,19 @@ export function useIncidents(statusFilter?: IncidentStatus): UseIncidentsReturn 
     }
   }, []);
 
+  const fetchIncidentLogs = useCallback(async (id: string): Promise<IncidentLogs | null> => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/v1/incidents/${id}/logs`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.data || null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     mountedRef.current = true;
     fetchIncidents();
@@ -231,5 +257,6 @@ export function useIncidents(statusFilter?: IncidentStatus): UseIncidentsReturn 
     resolveIncident,
     clearHistory,
     fetchIncidentSummary,
+    fetchIncidentLogs,
   };
 }

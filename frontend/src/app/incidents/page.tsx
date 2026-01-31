@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -14,7 +14,6 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
   Loader2,
   Database,
   Bug,
@@ -24,6 +23,7 @@ import {
   TrendingDown,
   ImageOff,
   XCircle,
+  Terminal,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +34,21 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   useIncidents,
   type Incident,
   type IncidentSeverity,
   type IncidentStatus,
-  type IncidentCategory,
   type IncidentSummary,
   type SLOBurnDriver,
+  type IncidentLogs,
 } from "@/hooks/use-incidents";
 import { cn } from "@/lib/utils";
 
@@ -151,6 +159,26 @@ function formatTimestamp(timestamp: string): string {
   });
 }
 
+function buildHighlightTokens(signals?: string[]): string[] {
+  if (!signals || signals.length === 0) return [];
+  const stopwords = new Set([
+    "the", "and", "from", "with", "that", "this", "into", "for", "your", "pod", "pods",
+    "event", "events", "severity", "category", "detected", "at", "in", "of", "to",
+  ]);
+  const tokens = new Set<string>();
+
+  signals.forEach((signal) => {
+    const normalized = signal.toLowerCase().replace(/^(event|severity|category|detected at):\s*/i, "");
+    normalized
+      .split(/[^a-z0-9/_\-.]+/i)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4 && !stopwords.has(token))
+      .forEach((token) => tokens.add(token));
+  });
+
+  return Array.from(tokens);
+}
+
 function getDuration(incident: Incident): number {
   if (incident.resolvedAt) {
     return new Date(incident.resolvedAt).getTime() - new Date(incident.detectedAt).getTime();
@@ -162,9 +190,14 @@ function IncidentCard({ incident }: { incident: Incident }) {
   const [isOpen, setIsOpen] = useState(false);
   const [summary, setSummary] = useState<IncidentSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
-  const { fetchIncidentSummary } = useIncidents();
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [logs, setLogs] = useState<IncidentLogs | null>(null);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const { fetchIncidentSummary, fetchIncidentLogs } = useIncidents();
   const SeverityIcon = severityConfig[incident.severity]?.icon || AlertCircle;
   const CategoryIcon = categoryIcons[incident.category] || HelpCircle;
+  const highlightTokens = useMemo(() => buildHighlightTokens(summary?.signals), [summary?.signals]);
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
@@ -174,6 +207,22 @@ function IncidentCard({ incident }: { incident: Incident }) {
       setSummary(summaryData);
       setIsLoadingSummary(false);
     }
+  };
+
+  const handleLogsOpenChange = async (open: boolean) => {
+    setIsLogsOpen(open);
+    if (!open) return;
+    if (logs || isLoadingLogs) return;
+
+    setIsLoadingLogs(true);
+    setLogsError(null);
+    const logsData = await fetchIncidentLogs(incident.id);
+    if (!logsData) {
+      setLogsError("Unable to fetch logs for this incident.");
+    } else {
+      setLogs(logsData);
+    }
+    setIsLoadingLogs(false);
   };
 
   return (
@@ -235,6 +284,20 @@ function IncidentCard({ incident }: { incident: Incident }) {
                 <span>Generating AI-powered summary...</span>
               </div>
             )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Incident Summary
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleLogsOpenChange(true)}
+              >
+                <Terminal className="mr-2 h-4 w-4" />
+                View logs
+              </Button>
+            </div>
 
             {summary && (
               <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
@@ -329,6 +392,75 @@ function IncidentCard({ incident }: { incident: Incident }) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      <Dialog open={isLogsOpen} onOpenChange={handleLogsOpenChange}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Incident logs</DialogTitle>
+            <DialogDescription>
+              Raw command outputs captured for this incident.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingLogs && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading logs...</span>
+            </div>
+          )}
+
+          {logsError && (
+            <div className="text-sm text-red-500">
+              {logsError}
+            </div>
+          )}
+
+          {logs && (
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="space-y-4">
+                {highlightTokens.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Highlighted lines are based on Gemini summary signals.
+                  </p>
+                )}
+                {logs.commands.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No command outputs available.</p>
+                ) : (
+                  logs.commands.map((command, idx) => (
+                    <div key={`${command.label}-${idx}`} className="rounded-lg border bg-slate-950 text-slate-100">
+                      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                          {command.label}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {new Date(command.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="px-3 py-2 text-xs text-slate-400">
+                        {command.command}
+                      </div>
+                      <pre className="px-3 pb-3 text-xs whitespace-pre-wrap">
+                        {command.output.split("\n").map((line, lineIdx) => {
+                          const lineLower = line.toLowerCase();
+                          const isHighlighted = highlightTokens.some((token) => lineLower.includes(token));
+                          return (
+                            <span
+                              key={`${command.label}-${lineIdx}`}
+                              className={isHighlighted ? "block rounded bg-amber-500/20 text-amber-100" : "block"}
+                            >
+                              {line || " "}
+                            </span>
+                          );
+                        })}
+                      </pre>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </Collapsible>
   );
 }
