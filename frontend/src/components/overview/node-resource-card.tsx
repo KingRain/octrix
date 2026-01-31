@@ -159,26 +159,22 @@ export function NodeResourceCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-5 divide-x divide-border border-t border-border">
+      <div className="grid grid-cols-4 divide-x divide-border border-t border-border">
         <div className="p-4 text-center">
-          <p className="text-sm text-gray-900 uppercase mb-2">CPU Used</p>
-          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuUsedCores.toFixed(3)} cores</p>
+          <p className="text-sm text-black uppercase mb-2">CPU Used</p>
+          <p className="text-xl font-semibold text-black font-mono">{cpuUsedCores.toFixed(3)} cores</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-gray-900 uppercase mb-2">CPU Total</p>
-          <p className="text-xl font-semibold text-gray-900 font-mono">{cpuTotalCores.toFixed(1)} cores</p>
+          <p className="text-sm text-black uppercase mb-2">CPU Total</p>
+          <p className="text-xl font-semibold text-black font-mono">{cpuTotalCores.toFixed(1)} cores</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-gray-900 uppercase mb-2">RAM Used</p>
-          <p className="text-xl font-semibold text-gray-900 font-mono">{formatBytes(memoryUsageBytes)}</p>
+          <p className="text-sm text-black uppercase mb-2">RAM Used</p>
+          <p className="text-xl font-semibold text-black font-mono">{formatBytes(memoryUsageBytes)}</p>
         </div>
         <div className="p-4 text-center">
-          <p className="text-sm text-gray-900 uppercase mb-2">RAM Total</p>
-          <p className="text-xl font-semibold text-gray-900 font-mono">{formatBytes(memoryTotalBytes)}</p>
-        </div>
-        <div className="p-4 text-center">
-          <p className="text-sm text-gray-900 uppercase mb-2">Uptime</p>
-          <p className="text-xl font-semibold text-gray-900 font-mono">{formatUptime(uptimeSeconds)}</p>
+          <p className="text-sm text-black uppercase mb-2">RAM Total</p>
+          <p className="text-xl font-semibold text-black font-mono">{formatBytes(memoryTotalBytes)}</p>
         </div>
       </div>
     </div>

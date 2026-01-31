@@ -33,6 +33,13 @@ class KubectlTopService {
     private readonly CACHE_TTL_MS = 5000; // 5 seconds cache
 
     /**
+     * Build kubectl command
+     */
+    private buildKubectlCommand(baseCommand: string): string {
+        return `kubectl ${baseCommand}`;
+    }
+
+    /**
      * Parse CPU value to millicores
      * Examples: "250m" -> 250, "1" -> 1000, "2500m" -> 2500
      */
@@ -79,7 +86,8 @@ class KubectlTopService {
      */
     async getNodeMetrics(): Promise<KubectlNodeMetrics[]> {
         try {
-            const { stdout } = await execAsync("kubectl top nodes --no-headers");
+            const command = this.buildKubectlCommand("top nodes --no-headers");
+            const { stdout } = await execAsync(command);
             const lines = stdout.trim().split("\n").filter(line => line.trim());
 
             return lines.map(line => {
@@ -111,7 +119,8 @@ class KubectlTopService {
      */
     async getPodMetrics(): Promise<KubectlPodMetrics[]> {
         try {
-            const { stdout } = await execAsync("kubectl top pods -A --no-headers");
+            const command = this.buildKubectlCommand("top pods -A --no-headers");
+            const { stdout } = await execAsync(command);
             const lines = stdout.trim().split("\n").filter(line => line.trim());
 
             return lines.map(line => {
@@ -178,9 +187,8 @@ class KubectlTopService {
 
         // We need to get pod info to know which node each pod is on
         try {
-            const { stdout } = await execAsync(
-                "kubectl get pods -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,NODE:.spec.nodeName --no-headers"
-            );
+            const command = this.buildKubectlCommand("get pods -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,NODE:.spec.nodeName --no-headers");
+            const { stdout } = await execAsync(command);
 
             const podNodeMap = new Map<string, string>();
             const lines = stdout.trim().split("\n").filter(line => line.trim());

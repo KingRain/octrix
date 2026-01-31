@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
 import { kubernetesService } from "../services/kubernetes.service.js";
-import { clusterManager } from "../cluster/cluster-manager.js";
 import { createChildLogger } from "../utils/logger.js";
 
 const logger = createChildLogger("cluster-api");
@@ -16,6 +15,7 @@ router.get("/nodes", async (_req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Failed to get nodes" });
   }
 });
+
 
 router.get("/pods", async (req: Request, res: Response) => {
   try {
@@ -130,44 +130,6 @@ router.get("/health", async (_req: Request, res: Response) => {
   } catch (error) {
     logger.error({ error }, "Failed to get health status");
     res.status(500).json({ success: false, message: "Failed to get health status" });
-  }
-});
-
-// Cluster management endpoints
-router.get("/clusters", async (_req: Request, res: Response) => {
-  try {
-    const clusters = clusterManager.getClusters();
-    const currentCluster = clusterManager.getCurrentCluster();
-    res.json({ 
-      success: true, 
-      data: {
-        clusters,
-        currentClusterId: currentCluster.id,
-      }
-    });
-  } catch (error) {
-    logger.error({ error }, "Failed to get clusters");
-    res.status(500).json({ success: false, message: "Failed to get clusters" });
-  }
-});
-
-router.post("/clusters/switch", async (req: Request, res: Response) => {
-  try {
-    const { clusterId } = req.body;
-    if (!clusterId) {
-      res.status(400).json({ success: false, message: "clusterId is required" });
-      return;
-    }
-    clusterManager.setCurrentCluster(clusterId);
-    const currentCluster = clusterManager.getCurrentCluster();
-    res.json({ 
-      success: true, 
-      data: currentCluster,
-      message: `Switched to ${currentCluster.name}`
-    });
-  } catch (error) {
-    logger.error({ error }, "Failed to switch cluster");
-    res.status(500).json({ success: false, message: "Failed to switch cluster" });
   }
 });
 

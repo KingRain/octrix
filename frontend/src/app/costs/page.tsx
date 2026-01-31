@@ -10,6 +10,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  Server,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,18 @@ import {
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+
+interface NodeMetrics {
+  nodeName: string;
+  cpuUsagePercent: number;
+  cpuUsedCores: number;
+  cpuTotalCores: number;
+  memoryUsagePercent: number;
+  memoryUsageBytes: number;
+  memoryTotalBytes: number;
+  podCount: number;
+  uptimeSeconds: number;
+}
 
 interface CostMetrics {
   estimatedCostBefore: number;
@@ -106,6 +119,7 @@ export default function CostsPage() {
   const [efficiencyData, setEfficiencyData] = useState<
     Array<{ date: string; value: number }>
   >([]);
+  const [minicubeNode, setMinicubeNode] = useState<NodeMetrics | null>(null);
 
   const {
     data: nodeUtilizationData,
@@ -116,6 +130,19 @@ export default function CostsPage() {
   const fetchCostData = async () => {
     try {
       setIsLoading(true);
+      
+      // Fetch minicube node data
+      const nodesRes = await fetch(`${BACKEND_URL}/api/v1/cluster/nodes`);
+      const nodesData = await nodesRes.json();
+      
+      if (nodesData.success && nodesData.data && nodesData.data.length > 0) {
+        const minicubeNode = nodesData.data.find((node: NodeMetrics) =>
+          node.nodeName.toLowerCase().includes('minikube') ||
+          node.nodeName.toLowerCase().includes('minicube')
+        );
+        setMinicubeNode(minicubeNode || null);
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/v1/costs/summary`);
       const data = await response.json();
 
@@ -133,84 +160,8 @@ export default function CostsPage() {
       }
     } catch (error) {
       console.error("Failed to fetch cost data:", error);
-      // Use fallback data
-      setCostData({
-        metrics: {
-          estimatedCostBefore: 152.3,
-          estimatedCostAfter: 137.5,
-          totalCostSaved: 475.9,
-          totalCostIncurred: 86.1,
-          scaleDownCount: 29,
-          scaleUpCount: 17,
-          optimizationPercent: -9.6,
-        },
-        totalAvoidableCost: 51500,
-        primaryCostDriver: "Scheduling & Over-Provisioning",
-        issues: [
-          {
-            id: "1",
-            title: "Pods Unschedulable",
-            status: "active",
-            monthlyCostImpact: 18400,
-            cause: "Pending pods triggered node scale-up",
-            scope: "7 pods · 2 nodes",
-            fix: "Reduce requests or fix scheduling constraints",
-            severity: "high",
-            category: "scheduling",
-          },
-          {
-            id: "2",
-            title: "Over-Provisioned Resources",
-            status: "optimized",
-            monthlyCostImpact: 9600,
-            cause: "Requests far exceed actual usage",
-            scope: "12 pods",
-            fix: "Right-size CPU & memory requests",
-            severity: "medium",
-            category: "over-provisioning",
-          },
-          {
-            id: "3",
-            title: "DaemonSet Overhead",
-            status: "active",
-            monthlyCostImpact: 14000,
-            cause: "Agents consuming node capacity",
-            scope: "6 DaemonSets / node",
-            fix: "Limit or optimize heavy agents",
-            severity: "high",
-            category: "daemonset",
-          },
-          {
-            id: "4",
-            title: "PVC Misconfiguration",
-            status: "active",
-            monthlyCostImpact: 9500,
-            cause: "Pods blocked, causing scaling pressure",
-            scope: "4 pods",
-            fix: "Rebind or reschedule PVCs",
-            severity: "medium",
-            category: "pvc",
-          },
-        ],
-        trends: [
-          { date: "01/24", before: 180, after: 170 },
-          { date: "01/25", before: 175, after: 160 },
-          { date: "01/26", before: 170, after: 155 },
-          { date: "01/27", before: 165, after: 145 },
-          { date: "01/28", before: 160, after: 140 },
-          { date: "01/29", before: 155, after: 138 },
-          { date: "01/30", before: 152, after: 137 },
-        ],
-      });
-      setEfficiencyData([
-        { date: "01/24", value: 82 },
-        { date: "01/25", value: 85 },
-        { date: "01/26", value: 78 },
-        { date: "01/27", value: 90 },
-        { date: "01/28", value: 88 },
-        { date: "01/29", value: 92 },
-        { date: "01/30", value: 95 },
-      ]);
+      // Don't use fallback data - let the page show empty state
+      setCostData(null);
     } finally {
       setIsLoading(false);
     }
@@ -222,10 +173,31 @@ export default function CostsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  if (isLoading || !costData) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!costData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center">
+          <p className="text-muted-foreground">Unable to load cost data</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Please ensure the backend is running and try refreshing
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => {
+          fetchCostData();
+          refetchNodeUtil();
+        }}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Retry
+        </Button>
       </div>
     );
   }
@@ -311,6 +283,48 @@ export default function CostsPage() {
               {metrics.optimizationPercent}% from optimizations
             </span>
           </div>
+
+      {/* Minicube Node Stats */}
+      {minicubeNode && (
+        <div className="bg-white rounded-xl border border-blue-200 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Server className="h-4 w-4 text-purple-400" />
+            <h2 className="text-sm font-medium text-gray-900">Minicube Node Stats</h2>
+            <span className="text-xs text-gray-500 ml-2">
+              Primary cluster node
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">CPU Usage</p>
+              <p className="text-2xl font-semibold text-foreground">
+                {minicubeNode.cpuUsagePercent.toFixed(1)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {minicubeNode.cpuUsedCores.toFixed(3)} / {minicubeNode.cpuTotalCores.toFixed(1)} cores
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">Memory Usage</p>
+              <p className="text-2xl font-semibold text-foreground">
+                {minicubeNode.memoryUsagePercent.toFixed(0)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {(minicubeNode.memoryUsageBytes / (1024 * 1024 * 1024)).toFixed(1)} GB / {(minicubeNode.memoryTotalBytes / (1024 * 1024 * 1024)).toFixed(1)} GB
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">Pods on Node</p>
+              <p className="text-2xl font-semibold text-foreground">
+                {minicubeNode.podCount}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total pods running on minicube
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Metrics Cards */}
       <div className="grid gap-4 grid-cols-4">

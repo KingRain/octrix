@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { costService } from "../services/cost.service.js";
 import { nodeUtilizationService } from "../services/node-utilization.service.js";
+import { operationalCostRiskService } from "../services/operational-cost-risk.service.js";
 import { createChildLogger } from "../utils/logger.js";
 
 const logger = createChildLogger("cost-routes");
@@ -108,6 +109,17 @@ router.patch("/config", async (req: Request, res: Response) => {
   } catch (error) {
     logger.error({ error }, "Failed to update cost config");
     res.status(500).json({ success: false, message: "Failed to update cost config" });
+  }
+});
+
+// Get operational cost risk data (simplified cost allocation replacement)
+router.get("/operational-risk", async (_req: Request, res: Response) => {
+  try {
+    const data = await operationalCostRiskService.getOperationalCostRisk();
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error({ error }, "Failed to get operational cost risk");
+    res.status(500).json({ success: false, message: "Failed to get operational cost risk" });
   }
 });
 

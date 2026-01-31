@@ -47,80 +47,7 @@ export class CostService {
   private trendHistory: TrendDataPoint[] = [];
 
   constructor() {
-    this.initializeDefaultData();
-  }
-
-  private initializeDefaultData() {
-    // Generate realistic cost issues based on common K8s cost problems
-    this.issues = [
-      {
-        id: uuidv4(),
-        title: "Pods Unschedulable",
-        status: "active",
-        monthlyCostImpact: 18400,
-        cause: "Pending pods triggered node scale-up",
-        scope: "7 pods · 2 nodes",
-        fix: "Reduce requests or fix scheduling constraints",
-        fixUrl: "/healing?filter=scheduling",
-        severity: "high",
-        category: "scheduling",
-      },
-      {
-        id: uuidv4(),
-        title: "Over-Provisioned Resources",
-        status: "optimized",
-        monthlyCostImpact: 9600,
-        cause: "Requests far exceed actual usage",
-        scope: "12 pods",
-        fix: "Right-size CPU & memory requests",
-        fixUrl: "/healing?filter=resources",
-        severity: "medium",
-        category: "over-provisioning",
-      },
-      {
-        id: uuidv4(),
-        title: "DaemonSet Overhead",
-        status: "active",
-        monthlyCostImpact: 14000,
-        cause: "Agents consuming node capacity",
-        scope: "6 DaemonSets / node",
-        fix: "Limit or optimize heavy agents",
-        fixUrl: "/healing?filter=daemonset",
-        severity: "high",
-        category: "daemonset",
-      },
-      {
-        id: uuidv4(),
-        title: "PVC Misconfiguration",
-        status: "active",
-        monthlyCostImpact: 9500,
-        cause: "Pods blocked, causing scaling pressure",
-        scope: "4 pods",
-        fix: "Rebind or reschedule PVCs",
-        fixUrl: "/nodes?filter=pvc",
-        severity: "medium",
-        category: "pvc",
-      },
-    ];
-
-    // Generate trend data for the last 7 days
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    
-    for (let i = 7; i >= 0; i--) {
-      const date = new Date(now - i * dayMs);
-      const dateStr = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
-      
-      // Simulate cost reduction over time
-      const baseCost = 180 - (7 - i) * 10;
-      const optimizedCost = baseCost - 10 - Math.random() * 15;
-      
-      this.trendHistory.push({
-        date: dateStr,
-        before: Math.max(baseCost, 100),
-        after: Math.max(optimizedCost, 80),
-      });
-    }
+    // Initialize empty arrays - no dummy data
   }
 
   async getCostMetrics(): Promise<CostMetrics> {
@@ -155,15 +82,20 @@ export class CostService {
       }
     }
 
-    // Add sample data if no real events
+    // If no real events, return zeros
     if (scaleDownCount === 0 && scaleUpCount === 0) {
-      scaleDownSavings = 514.40;
-      scaleUpCosts = 38.50;
-      scaleDownCount = 29;
-      scaleUpCount = 17;
+      return {
+        estimatedCostBefore: 0,
+        estimatedCostAfter: 0,
+        totalCostSaved: 0,
+        totalCostIncurred: 0,
+        scaleDownCount: 0,
+        scaleUpCount: 0,
+        optimizationPercent: 0,
+      };
     }
 
-    const estimatedCostBefore = 152.30; // Base weekly cost
+    const estimatedCostBefore = scaleDownSavings + scaleUpCosts;
     const totalCostSaved = scaleDownSavings;
     const totalCostIncurred = scaleUpCosts;
     const netSavings = totalCostSaved - totalCostIncurred;
@@ -203,12 +135,52 @@ export class CostService {
       ? "Scheduling & Over-Provisioning"
       : sortedByImpact[0]?.title || "Resource Optimization";
 
+    // Generate trend data from healing activity
+    const trendHistory: TrendDataPoint[] = [];
+    const activity = healingService.getActivity(50, "all");
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    for (let i = 7; i >= 0; i--) {
+      const date = new Date(now - i * dayMs);
+      const dateStr = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+      
+      // Calculate costs from activity for this day
+      const dayActivity = activity.filter((event) => {
+        const eventTime = new Date(event.timestamp).getTime();
+        const eventDate = new Date(now - i * dayMs);
+        return eventTime >= eventDate.getTime() && eventTime < eventDate.getTime() + dayMs;
+      });
+      
+      let dayCostBefore = 0;
+      let dayCostAfter = 0;
+      const costPerReplicaHour = 0.15;
+      
+      for (const event of dayActivity) {
+        if (event.action === "scale-deployment" && event.status === "success") {
+          const from = event.fromReplicas || 0;
+          const to = event.toReplicas || 0;
+          if (to < from) {
+            dayCostAfter += (from - to) * costPerReplicaHour * 24;
+          } else {
+            dayCostBefore += (to - from) * costPerReplicaHour * 24;
+          }
+        }
+      }
+      
+      trendHistory.push({
+        date: dateStr,
+        before: dayCostBefore,
+        after: dayCostAfter,
+      });
+    }
+
     return {
       metrics,
       totalAvoidableCost,
       primaryCostDriver,
       issues,
-      trends: this.trendHistory,
+      trends: trendHistory,
     };
   }
 
@@ -254,12 +226,8 @@ export class CostService {
       });
     } catch (error) {
       logger.error({ error }, "Failed to get efficiency data");
-      // Return mock data
-      return [
-        { resource: "api-gateway", namespace: "production", cpuRequested: 2000, cpuUsed: 1400, memoryRequested: 4096 * 1024 * 1024, memoryUsed: 2867 * 1024 * 1024, efficiency: 70, wastedCost: 15.50 },
-        { resource: "user-service", namespace: "production", cpuRequested: 1000, cpuUsed: 450, memoryRequested: 2048 * 1024 * 1024, memoryUsed: 1024 * 1024 * 1024, efficiency: 45, wastedCost: 28.00 },
-        { resource: "order-processor", namespace: "production", cpuRequested: 1500, cpuUsed: 1200, memoryRequested: 3072 * 1024 * 1024, memoryUsed: 2458 * 1024 * 1024, efficiency: 80, wastedCost: 8.25 },
-      ];
+      // Return empty array instead of mock data
+      return [];
     }
   }
 

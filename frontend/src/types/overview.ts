@@ -62,8 +62,10 @@ export interface NodeMetrics {
   memoryUsagePercent: number;
   memoryUsageBytes: number;
   memoryTotalBytes: number;
-  diskUsagePercent: number;
+  diskUsagePercent?: number;
   podCount: number;
   uptimeSeconds: number;
   podMetrics?: PodMetricsInfo[];
+  clusterId?: string;
+  clusterName?: string;
 }

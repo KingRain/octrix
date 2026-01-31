@@ -54,7 +54,7 @@ const navItems = [
     icon: DollarSign,
   },
   {
-    title: "Cost Allocation",
+    title: "Operational Cost Risk",
     href: "/cost-allocation",
     icon: PieChart,
   },

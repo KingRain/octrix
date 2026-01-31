@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ClusterSelector } from "@/components/shared/cluster-selector";
+import { NodeResourceCard } from "@/components/overview/node-resource-card";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
@@ -21,6 +22,14 @@ interface NodeMetrics {
   diskUsagePercent: number;
   podCount: number;
   uptimeSeconds: number;
+  podMetrics?: Array<{
+    name: string;
+    namespace: string;
+    cpuMillicores: number;
+    memoryBytes: number;
+  }>;
+  clusterId?: string;
+  clusterName?: string;
 }
 
 interface PodInfo {
@@ -78,54 +87,42 @@ export default function NodesPage() {
   const [pods, setPods] = useState<PodInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [minicubeNode, setMinicubeNode] = useState<NodeMetrics | null>(null);
 
   const fetchData = async () => {
     try {
-      const [nodesRes, overviewRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/v1/overview/nodes`),
-        fetch(`${BACKEND_URL}/api/v1/overview`),
-      ]);
+      // Fetch nodes from single cluster
+      const res = await fetch(`${BACKEND_URL}/api/v1/cluster/nodes`);
+      const data = await res.json();
 
-      // Check if responses are OK before parsing JSON to avoid parsing error messages
-      if (!nodesRes.ok) {
-        console.error(
-          `Nodes API error: ${nodesRes.status} ${nodesRes.statusText}`,
+      if (data.success && data.data) {
+        setNodes(data.data);
+        // Find node named 'minikube' or 'minicube'
+        const foundMinicube = data.data.find((node: NodeMetrics) =>
+          node.nodeName.toLowerCase().includes('minikube') ||
+          node.nodeName.toLowerCase().includes('minicube')
         );
-        return;
-      }
-      if (!overviewRes.ok) {
-        console.error(
-          `Overview API error: ${overviewRes.status} ${overviewRes.statusText}`,
-        );
-        return;
+        setMinicubeNode(foundMinicube || null);
       }
 
-      let nodesData, overviewData;
-      try {
-        nodesData = await nodesRes.json();
-        overviewData = await overviewRes.json();
-      } catch (parseError) {
-        console.error("Failed to parse JSON response:", parseError);
-        return;
-      }
-
-      if (nodesData.success && nodesData.data) {
-        setNodes(nodesData.data);
-      }
-
-      if (overviewData.success && overviewData.data?.services) {
-        const allPods: PodInfo[] = [];
-        overviewData.data.services.forEach(
-          (service: { pods: PodInfo[]; namespace: string }) => {
-            service.pods.forEach((pod: PodInfo) => {
-              allPods.push({
-                ...pod,
-                namespace: service.namespace || "default",
+      // Fetch pods from overview endpoint
+      const overviewRes = await fetch(`${BACKEND_URL}/api/v1/overview`);
+      if (overviewRes.ok) {
+        const overviewData = await overviewRes.json();
+        if (overviewData.success && overviewData.data?.services) {
+          const allPods: PodInfo[] = [];
+          overviewData.data.services.forEach(
+            (service: { pods: PodInfo[]; namespace: string }) => {
+              service.pods.forEach((pod: PodInfo) => {
+                allPods.push({
+                  ...pod,
+                  namespace: service.namespace || "default",
+                });
               });
-            });
-          },
-        );
-        setPods(allPods);
+            },
+          );
+          setPods(allPods);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch nodes data:", error);
@@ -258,9 +255,23 @@ export default function NodesPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-gray-900 font-mono text-sm hover:underline cursor-pointer">
-                      {node.nodeName}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-900 font-mono text-sm hover:underline cursor-pointer">
+                        {node.nodeName}
+                      </span>
+                      {node.clusterName && (
+                        <Badge
+                          className={cn(
+                            "text-xs",
+                            node.clusterId === "cluster-1"
+                              ? "bg-blue-100 text-blue-700 border-blue-200"
+                              : "bg-green-100 text-green-700 border-green-200"
+                          )}
+                        >
+                          {node.clusterName}
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     Control Plane, Etcd
