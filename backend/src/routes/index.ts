@@ -6,6 +6,7 @@ import escalationRouter from "../api/escalation.api.js";
 import simulatorRouter from "../api/simulator.api.js";
 import clusterRouter from "../api/cluster.api.js";
 import costRouter from "../api/cost.api.js";
+import timelineRouter from "../api/timeline.api.js";
 import overviewRouter from "./overview.routes.js";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use("/escalation", escalationRouter);
 router.use("/simulator", simulatorRouter);
 router.use("/cluster", clusterRouter);
 router.use("/costs", costRouter);
+router.use("/timeline", timelineRouter);
 router.use("/overview", overviewRouter);
 
 router.get("/health", async (_req, res) => {
