@@ -351,7 +351,7 @@ function IncidentCard({ incident }: { incident: Incident }) {
     <Collapsible open={isOpen} onOpenChange={handleOpenChange}>
       <Card className={cn("transition-all hover:shadow-lg hover:border-primary/30", isOpen && "ring-1 ring-border")}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-all duration-200">
+          <CardHeader className="cursor-pointer">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div
@@ -361,11 +361,11 @@ function IncidentCard({ incident }: { incident: Incident }) {
                       "bg-gray-500/10",
                   )}
                 >
-                  <SeverityIcon className="h-4 w-4" />
+                  <SeverityIcon className="h-5 w-5" />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-sm font-medium">
+                    <CardTitle className="text-lg font-medium">
                       {incident.title}
                     </CardTitle>
                     {isOpen ? (
@@ -379,21 +379,21 @@ function IncidentCard({ incident }: { incident: Incident }) {
                     <span>
                       {categoryLabels[incident.category] || incident.category}
                     </span>
-                    <span>-</span>
+                    <span>•</span>
                     <span>{incident.resource}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Badge
                   variant="outline"
                   className={statusConfig[incident.status]?.color || ""}
                 >
                   {statusConfig[incident.status]?.label || incident.status}
                 </Badge>
-                <div className="text-xs text-muted-foreground text-right">
-                  <div>{formatTimestamp(incident.detectedAt)}</div>
-                  <div className="flex items-center gap-1">
+                <div className="text-xs text-muted-foreground text-right space-y-0.5">
+                  <div className="font-medium">{formatTimestamp(incident.detectedAt)}</div>
+                  <div className="flex items-center gap-1 justify-end">
                     <Clock className="h-3 w-3" />
                     {formatDuration(getDuration(incident))}
                   </div>
@@ -697,7 +697,7 @@ export default function IncidentsPage() {
       : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-transparent min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Incidents</h1>
