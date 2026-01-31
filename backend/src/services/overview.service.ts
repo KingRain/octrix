@@ -1,6 +1,7 @@
 import { createChildLogger } from "../utils/logger.js";
 import { kubernetesService } from "./kubernetes.service.js";
 import { prometheusService } from "./prometheus.service.js";
+import { kubectlTopService } from "./kubectl-top.service.js";
 import { incidentDetector } from "../incidents/detector.js";
 import type { ClusterOverview, ServiceGroup, PodInfo } from "../types/index.js";
 
@@ -9,17 +10,23 @@ const logger = createChildLogger("overview-service");
 export class OverviewService {
   async getClusterOverview(): Promise<ClusterOverview> {
     try {
-      const [pods, services, podMetrics, clusterMetrics, pvcs, volumeMetrics] = await Promise.all([
+      const [pods, services, podMetrics, clusterMetrics, pvcs, volumeMetrics, kubectlTopData] = await Promise.all([
         kubernetesService.getPods(),
         kubernetesService.getServices(),
         prometheusService.getPodMetrics(),
         prometheusService.getClusterMetrics(),
         kubernetesService.getPVCs(),
         prometheusService.getVolumeMetrics(),
+        kubectlTopService.getTopData(true), // Force refresh for real-time data
       ]);
 
       const podMetricsMap = new Map(
         podMetrics.map((pm) => [`${pm.namespace}/${pm.podName}`, pm])
+      );
+
+      // Create kubectl top metrics map for accurate real-time metrics
+      const kubectlPodMetricsMap = new Map(
+        kubectlTopData.pods.map((pm) => [`${pm.namespace}/${pm.name}`, pm])
       );
 
       const pvcMap = new Map(
@@ -35,7 +42,8 @@ export class OverviewService {
         services,
         podMetricsMap,
         pvcMap,
-        volumeMetricsMap
+        volumeMetricsMap,
+        kubectlPodMetricsMap
       );
 
       let healthyPods = 0;
@@ -71,7 +79,8 @@ export class OverviewService {
     services: Awaited<ReturnType<typeof kubernetesService.getServices>>,
     podMetricsMap: Map<string, Awaited<ReturnType<typeof prometheusService.getPodMetrics>>[number]>,
     pvcMap: Map<string, any>,
-    volumeMetricsMap: Map<string, any>
+    volumeMetricsMap: Map<string, any>,
+    kubectlPodMetricsMap: Map<string, { namespace: string; name: string; cpuCores: string; memoryBytes: string }>
   ): ServiceGroup[] {
     const serviceGroupMap = new Map<string, ServiceGroup>();
 
@@ -90,6 +99,7 @@ export class OverviewService {
 
       const groupKey = `${pod.namespace}/${serviceName}`;
       const metrics = podMetricsMap.get(`${pod.namespace}/${pod.name}`);
+      const kubectlMetrics = kubectlPodMetricsMap.get(`${pod.namespace}/${pod.name}`);
 
       const podPvcs: any[] = [];
       
@@ -142,13 +152,19 @@ export class OverviewService {
         podPvcs.some(p => p.health === "critical") ? "critical" :
         podPvcs.some(p => p.health === "warning") ? "warning" : "healthy";
 
+      // Use kubectl top metrics as primary source (most accurate real-time data)
+      // Fall back to Prometheus metrics, then to default values
+      const kubectlCpu = kubectlMetrics ? kubectlTopService.parseCpuToMillicores(kubectlMetrics.cpuCores) : null;
+      const kubectlMemory = kubectlMetrics ? kubectlTopService.parseMemoryToBytes(kubectlMetrics.memoryBytes) : null;
+
       const podInfo: PodInfo = {
         id: pod.id,
         name: pod.name,
         nodeName: pod.nodeName,
         status: this.mapPodStatus(pod, metrics),
-        cpu: metrics?.cpuUsageCores ? metrics.cpuUsageCores * 1000 : (pod.cpuUsage || 20),
-        memory: metrics?.memoryUsageBytes || pod.memoryUsage || (50 * 1024 * 1024),
+        // Priority: kubectl top > Prometheus > default (use !== null to allow 0 values)
+        cpu: kubectlCpu !== null ? kubectlCpu : (metrics?.cpuUsageCores !== undefined ? metrics.cpuUsageCores * 1000 : 0),
+        memory: kubectlMemory !== null ? kubectlMemory : (metrics?.memoryUsageBytes !== undefined ? metrics.memoryUsageBytes : 0),
         restarts: pod.restarts,
         pvcHealth,
         pvcs: podPvcs,

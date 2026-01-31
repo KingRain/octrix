@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
-import { Outfit, Ultra } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Header } from "@/components/layout/header";
 import { Toaster } from "@/components/ui/sonner";
 
-const outfit = Outfit({
-  weight: ["400", "500", "600", "700"],
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-outfit",
 });
 
-const ultra = Ultra({
-  weight: ["400"],
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
-  variable: "--font-ultra",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${outfit.variable} ${ultra.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SidebarProvider>
           <AppSidebar />

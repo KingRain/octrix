@@ -100,17 +100,10 @@ export function AppSidebar() {
     <Sidebar className="border-r border-border bg-white">
       <SidebarHeader className="border-b border-border px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <img
-            src="/octrixLogo.png"
-            alt="Octrix Logo"
-            className="h-8 w-auto"
-          />
-          <span 
-            className="text-xl tracking-tight"
-            style={{ fontFamily: "Ultra, serif" }}
-          >
-            Octrix
-          </span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <LayoutDashboard className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <span className="text-xl font-semibold tracking-tight">Octrix</span>
         </Link>
       </SidebarHeader>
 
@@ -124,7 +117,7 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.href}
                     className={cn(
-                      "w-full justify-start gap-4 px-6 py-5",
+                      "w-full justify-start gap-4 px-5 py-4",
                       pathname === item.href &&
                         "bg-accent text-accent-foreground",
                     )}
