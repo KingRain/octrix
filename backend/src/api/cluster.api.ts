@@ -31,6 +31,8 @@ router.get("/pods", async (req: Request, res: Response) => {
 router.post("/pods/restart-all", async (_req: Request, res: Response) => {
   try {
     const { kubernetesService } = await import("../services/kubernetes.service.js");
+    
+    // Delete all existing pods
     const pods = await kubernetesService.getPods();
     const deletePromises = pods.map((pod) => 
       kubernetesService.deletePod(pod.namespace, pod.name)
@@ -42,10 +44,43 @@ router.post("/pods/restart-all", async (_req: Request, res: Response) => {
       pods[index].name
     ).length;
     
+    // Spawn new pods with simulated CPU activity for all categories
+    const categories = [
+      { serviceName: "streaming-service", namespace: "ott-platform", cpuUsage: 80, memoryUsage: 256 },
+      { serviceName: "cdn-cache", namespace: "ott-platform", cpuUsage: 50, memoryUsage: 128 },
+      { serviceName: "authentication", namespace: "ott-platform", cpuUsage: 60, memoryUsage: 200 },
+      { serviceName: "notifications", namespace: "ott-platform", cpuUsage: 40, memoryUsage: 150 },
+      { serviceName: "video-transcoder", namespace: "ott-platform", cpuUsage: 90, memoryUsage: 512 },
+      { serviceName: "recommendation-engine", namespace: "ott-platform", cpuUsage: 70, memoryUsage: 384 },
+    ];
+    
+    const podsToCreate = 15; // Create 15 pods total
+    const podsPerCategory = Math.ceil(podsToCreate / categories.length);
+    
+    for (const category of categories) {
+      for (let i = 0; i < podsPerCategory; i++) {
+        const suffix = Math.random().toString(36).substring(2, 8);
+        const podName = `${category.serviceName}-${suffix}`;
+        
+        try {
+          await kubernetesService.createPod(
+            category.namespace,
+            podName,
+            { app: category.serviceName, simulated: "true" },
+            "nginx:latest",
+            category.cpuUsage,
+            category.memoryUsage
+          );
+        } catch (error) {
+          logger.error({ error, podName, category }, "Failed to create pod");
+        }
+      }
+    }
+    
     res.json({ 
       success: true, 
-      message: `Restarted ${deleted} pods`, 
-      data: { deleted } 
+      message: `Restarted ${deleted} pods and spawned ${categories.length * podsPerCategory} new pods`, 
+      data: { deleted, created: categories.length * podsPerCategory } 
     });
   } catch (error) {
     logger.error({ error }, "Failed to restart all pods");

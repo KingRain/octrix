@@ -86,7 +86,9 @@ export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
       }
     });
 
-    return Array.from(nodeMap.values()).map((n) => ({
+    return Array.from(nodeMap.values())
+      .filter((n) => n.nodeName && !n.nodeName.includes('192.168.49.2:9100'))
+      .map((n) => ({
       nodeName: n.nodeName || "unknown",
       cpuUsagePercent: n.cpuUsagePercent || 0,
       cpuUsedCores: ((n.cpuUsagePercent || 0) / 100) * 16,
@@ -98,7 +100,7 @@ export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
       networkReceiveBytesRate: 0,
       networkTransmitBytesRate: 0,
       podCount: n.podCount || 0,
-      uptimeSeconds: 34236 + Math.floor(Math.random() * 10000),
+      uptimeSeconds: 34236,
       conditions: {
         ready: true,
         memoryPressure: (n.memoryUsagePercent || 0) > 90,
@@ -113,12 +115,12 @@ export async function collectNodeMetrics(): Promise<NodeMetrics[]> {
 }
 
 function getMockNodeMetrics(): NodeMetrics[] {
-  const cpuUsage1 = 3.79 + Math.random() * 2;
-  const cpuUsage2 = 5.2 + Math.random() * 3;
-  const cpuUsage3 = 4.1 + Math.random() * 2;
-  const memUsage1 = 67.96 + Math.random() * 5;
-  const memUsage2 = 58.3 + Math.random() * 5;
-  const memUsage3 = 62.1 + Math.random() * 5;
+  const cpuUsage1 = 45 + Math.random() * 35;
+  const cpuUsage2 = 52 + Math.random() * 28;
+  const cpuUsage3 = 38 + Math.random() * 42;
+  const memUsage1 = 65 + Math.random() * 25;
+  const memUsage2 = 58 + Math.random() * 30;
+  const memUsage3 = 72 + Math.random() * 18;
   
   return [
     {
