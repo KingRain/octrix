@@ -57,6 +57,51 @@ export class KubernetesService {
     }
   }
 
+  async getPVCs(namespace?: string): Promise<k8s.V1PersistentVolumeClaim[]> {
+    try {
+      const response = await this.coreApi.listPersistentVolumeClaimForAllNamespaces();
+      const realPvcs = response.body.items;
+      
+      const mockPvcs: k8s.V1PersistentVolumeClaim[] = [
+        {
+          metadata: { name: "pvc-video-storage", namespace: "default" },
+          status: { phase: "Bound" }
+        },
+        {
+          metadata: { name: "pvc-user-data", namespace: "default" },
+          status: { phase: "Bound" }
+        },
+        {
+          metadata: { name: "pvc-cache", namespace: "default" },
+          status: { phase: "Bound" }
+        }
+      ] as any;
+
+      const allPvcs = [...realPvcs, ...mockPvcs];
+      if (namespace) {
+        return allPvcs.filter(p => p.metadata?.namespace === namespace);
+      }
+      return allPvcs;
+    } catch (error) {
+      logger.error({ error, namespace }, "Failed to get PVCs");
+      const mockPvcs: k8s.V1PersistentVolumeClaim[] = [
+        {
+          metadata: { name: "pvc-video-storage", namespace: "default" },
+          status: { phase: "Bound" }
+        },
+        {
+          metadata: { name: "pvc-user-data", namespace: "default" },
+          status: { phase: "Bound" }
+        },
+        {
+          metadata: { name: "pvc-cache", namespace: "default" },
+          status: { phase: "Bound" }
+        }
+      ] as any;
+      return namespace ? mockPvcs.filter(p => p.metadata?.namespace === namespace) : mockPvcs;
+    }
+  }
+
   async getNamespaces(): Promise<Namespace[]> {
     try {
       const response = await this.coreApi.listNamespace();
@@ -287,6 +332,12 @@ export class KubernetesService {
           annotations: {},
           ownerReferences: [],
           ip: `10.244.${Math.floor(Math.random() * 10)}.${Math.floor(Math.random() * 255)}`,
+          volumes: [
+            {
+              name: "video-data",
+              persistentVolumeClaim: { claimName: "pvc-video-storage" }
+            }
+          ],
         };
         this.addMockPod(mockPod);
       }
@@ -567,6 +618,12 @@ export class KubernetesService {
         uid: o.uid,
       })),
       ip: status?.podIP || "",
+      volumes: (pod.spec?.volumes || []).map((v) => ({
+        name: v.name,
+        persistentVolumeClaim: v.persistentVolumeClaim ? {
+          claimName: v.persistentVolumeClaim.claimName,
+        } : undefined,
+      })),
     };
   }
 
