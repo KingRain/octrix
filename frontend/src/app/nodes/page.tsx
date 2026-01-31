@@ -5,6 +5,8 @@ import { Server, Loader2, Copy, RefreshCw, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ClusterSelector } from "@/components/shared/cluster-selector";
+import { NodeResourceCard } from "@/components/overview/node-resource-card";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
