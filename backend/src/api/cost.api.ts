@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { costService } from "../services/cost.service.js";
+import { nodeUtilizationService } from "../services/node-utilization.service.js";
 import { createChildLogger } from "../utils/logger.js";
 
 const logger = createChildLogger("cost-routes");
@@ -72,6 +73,41 @@ router.patch("/issues/:id", async (req: Request, res: Response) => {
   } catch (error) {
     logger.error({ error }, "Failed to update issue status");
     res.status(500).json({ success: false, message: "Failed to update issue status" });
+  }
+});
+
+// Get node utilization data with cluster summary and insights
+router.get("/node-utilization", async (_req: Request, res: Response) => {
+  try {
+    const data = await nodeUtilizationService.getNodeUtilizationData();
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error({ error }, "Failed to get node utilization data");
+    res.status(500).json({ success: false, message: "Failed to get node utilization data" });
+  }
+});
+
+// Get cost configuration
+router.get("/config", async (_req: Request, res: Response) => {
+  try {
+    const config = nodeUtilizationService.getCostConfig();
+    res.json({ success: true, data: config });
+  } catch (error) {
+    logger.error({ error }, "Failed to get cost config");
+    res.status(500).json({ success: false, message: "Failed to get cost config" });
+  }
+});
+
+// Update cost configuration
+router.patch("/config", async (req: Request, res: Response) => {
+  try {
+    const { defaultNodeHourlyCost, nodeTypeCosts } = req.body;
+    nodeUtilizationService.updateCostConfig({ defaultNodeHourlyCost, nodeTypeCosts });
+    const config = nodeUtilizationService.getCostConfig();
+    res.json({ success: true, data: config });
+  } catch (error) {
+    logger.error({ error }, "Failed to update cost config");
+    res.status(500).json({ success: false, message: "Failed to update cost config" });
   }
 });
 
